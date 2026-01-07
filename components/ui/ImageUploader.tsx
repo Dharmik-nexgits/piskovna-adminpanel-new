@@ -20,8 +20,6 @@ export function ImageUploader({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Mock upload logic: In a real app, upload to server here
-      // For now, creating a local object URL to simulate immediate preview
       const objectUrl = URL.createObjectURL(file);
       onChange(objectUrl);
     }
@@ -63,14 +61,14 @@ export function ImageUploader({
               onClick={() => fileInputRef.current?.click()}
               className="px-3 py-1.5 bg-white/90 rounded-lg text-xs font-semibold hover:bg-white text-gray-700 shadow-sm"
             >
-              Change
+              Změnit
             </button>
             <button
               type="button"
               onClick={() => onChange(null)}
               className="px-3 py-1.5 bg-red-500/90 rounded-lg text-xs font-semibold hover:bg-red-500 text-white shadow-sm"
             >
-              Remove
+              Odstranit
             </button>
           </div>
         </div>
@@ -85,10 +83,10 @@ export function ImageUploader({
             <UploadCloud className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
           </div>
           <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-            Click to upload or drag & drop
+            Klikněte pro nahrání nebo přetáhněte sem
           </span>
           <span className="text-xs text-gray-400 mt-1">
-            SVG, PNG, JPG or GIF (max. 5MB)
+            SVG, PNG, JPG nebo GIF (max. 5MB)
           </span>
         </div>
       )}

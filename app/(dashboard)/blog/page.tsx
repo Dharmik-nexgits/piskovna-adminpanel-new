@@ -7,6 +7,8 @@ import {
   Filter,
   Calendar as CalendarIcon,
   ChevronsUpDown,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -19,16 +21,17 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/Table";
+import { Modal } from "@/components/ui/Modal";
 
-// ... (blogPosts array stays the same) ...
-const blogPosts = [
+// Mock data (could be fetched from API)
+const initialBlogPosts = [
   {
     id: 1,
     title: "The Art of Wine Tasting",
     author: "Jan Vokál",
     authorAvatar: null,
     category: "Education",
-    status: "Published",
+    status: "Publikováno",
     date: "2024-10-15",
     views: 1240,
   },
@@ -38,7 +41,7 @@ const blogPosts = [
     author: "Mlýn Resort",
     authorAvatar: null,
     category: "News",
-    status: "Draft",
+    status: "Koncept",
     date: "2024-11-02",
     views: 85,
   },
@@ -48,7 +51,7 @@ const blogPosts = [
     author: "Golf Čertovo",
     authorAvatar: null,
     category: "Reviews",
-    status: "Published",
+    status: "Publikováno",
     date: "2024-09-20",
     views: 3500,
   },
@@ -58,7 +61,7 @@ const blogPosts = [
     author: "V Nebi.cz",
     authorAvatar: null,
     category: "Education",
-    status: "Archived",
+    status: "Archivováno",
     date: "2023-12-05",
     views: 900,
   },
@@ -68,7 +71,7 @@ const blogPosts = [
     author: "MN Holding",
     authorAvatar: null,
     category: "Announcements",
-    status: "Published",
+    status: "Publikováno",
     date: "2024-10-01",
     views: 150,
   },
@@ -78,14 +81,38 @@ const blogPosts = [
     author: "SEBRE, a.s.",
     authorAvatar: null,
     category: "Guides",
-    status: "Scheduled",
+    status: "Naplánováno",
     date: "2024-12-10",
     views: 0,
   },
 ];
 
 export default function BlogPage() {
+  const [blogPosts, setBlogPosts] = useState(initialBlogPosts);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<number | null>(null);
+
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(blogPosts.length / itemsPerPage);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = blogPosts.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handleDeleteClick = (id: number) => {
+    setPostToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (postToDelete) {
+      setBlogPosts(blogPosts.filter((post) => post.id !== postToDelete));
+      setDeleteModalOpen(false);
+      setPostToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Header Section */}
@@ -93,7 +120,7 @@ export default function BlogPage() {
       {/* Sub Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-b border-gray-100">
         <h2 className="text-lg font-semibold text-gray-700">
-          Blog List{" "}
+          Seznam článků{" "}
           <span className="text-gray-400 font-normal">
             ({blogPosts.length})
           </span>
@@ -101,7 +128,7 @@ export default function BlogPage() {
         <Link href="/blog/new">
           <Button className="gap-2 shadow-sm">
             <Plus className="w-4 h-4" />
-            Add New
+            Přidat nový
           </Button>
         </Link>
       </div>
@@ -112,31 +139,29 @@ export default function BlogPage() {
           <TableHeader>
             {/* Header Titles */}
             <TableRow className="bg-gray-50/50 border-b border-gray-200">
-              <TableHead className="min-w-[250px]">Title</TableHead>
-              <TableHead className="min-w-[200px]">
+              <TableHead className="min-w-62.5">Název</TableHead>
+              <TableHead className="min-w-50">
                 <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                  Author <ChevronsUpDown className="w-3 h-3 text-gray-400" />
+                  Autor <ChevronsUpDown className="w-3 h-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="min-w-[150px]">
+              <TableHead className="min-w-37.5">
                 <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                  Category <ChevronsUpDown className="w-3 h-3 text-gray-400" />
+                  Kategorie <ChevronsUpDown className="w-3 h-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="min-w-[150px]">
+              <TableHead className="min-w-37.5">
                 <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                  Date <ChevronsUpDown className="w-3 h-3 text-gray-400" />
+                  Datum <ChevronsUpDown className="w-3 h-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="min-w-[120px]">
+              <TableHead className="min-w-30">
                 <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                  Status <ChevronsUpDown className="w-3 h-3 text-gray-400" />
+                  Stav <ChevronsUpDown className="w-3 h-3 text-gray-400" />
                 </div>
               </TableHead>
-              <TableHead className="min-w-[100px]">
-                <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                  Views <ChevronsUpDown className="w-3 h-3 text-gray-400" />
-                </div>
+              <TableHead className="min-w-25 text-right">
+                <div className="flex items-center justify-end gap-1">Akce</div>
               </TableHead>
             </TableRow>
 
@@ -146,7 +171,7 @@ export default function BlogPage() {
                 <Input
                   type="text"
                   className="h-8 text-xs bg-white"
-                  placeholder="Filter title..."
+                  placeholder="Hledat název..."
                   icon={<Filter className="w-3 h-3" />}
                 />
               </TableCell>
@@ -154,7 +179,7 @@ export default function BlogPage() {
                 <Input
                   type="text"
                   className="h-8 text-xs bg-white"
-                  placeholder="Filter author..."
+                  placeholder="Hledat autora..."
                   icon={<Filter className="w-3 h-3" />}
                 />
               </TableCell>
@@ -168,7 +193,7 @@ export default function BlogPage() {
               <TableCell className="p-2">
                 <div className="relative">
                   <div className="flex items-center w-full px-3 h-8 text-xs border border-secondary rounded-xl text-gray-400 cursor-pointer bg-white/50">
-                    <span className="truncate">Select date</span>
+                    <span className="truncate">Vybrat datum</span>
                   </div>
                   <CalendarIcon className="w-3 h-3 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -180,18 +205,12 @@ export default function BlogPage() {
                   icon={<Filter className="w-3 h-3" />}
                 />
               </TableCell>
-              <TableCell className="p-2">
-                <Input
-                  type="text"
-                  className="h-8 text-xs bg-white"
-                  icon={<Filter className="w-3 h-3" />}
-                />
-              </TableCell>
+              <TableCell className="p-2"></TableCell>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {blogPosts.map((post) => (
+            {currentItems.map((post) => (
               <TableRow
                 key={post.id}
                 className="hover:bg-brand-bg/10 transition-colors group border-b border-gray-50 last:border-b-0"
@@ -227,11 +246,11 @@ export default function BlogPage() {
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
                         ${
-                          post.status === "Published"
+                          post.status === "Publikováno"
                             ? "bg-green-50 text-green-700 border-green-200"
-                            : post.status === "Draft"
+                            : post.status === "Koncept"
                             ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            : post.status === "Scheduled"
+                            : post.status === "Naplánováno"
                             ? "bg-blue-50 text-blue-700 border-blue-200"
                             : "bg-gray-50 text-gray-700 border-gray-200"
                         }
@@ -240,7 +259,27 @@ export default function BlogPage() {
                     {post.status}
                   </span>
                 </TableCell>
-                <TableCell className="text-gray-600">{post.views}</TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    <Link href={`/blog/${post.id}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-primary hover:bg-primary/5"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDeleteClick(post.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -249,15 +288,44 @@ export default function BlogPage() {
         {/* Footer / Pagination Placeholder */}
         <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
           <span>
-            Showing 1 to {blogPosts.length} of {blogPosts.length} entries
+            Zobrazeno {Math.min(indexOfFirstItem + 1, blogPosts.length)} -{" "}
+            {Math.min(indexOfLastItem, blogPosts.length)} z {blogPosts.length}{" "}
+            záznamů
           </span>
           <Pagination
             currentPage={currentPage}
-            totalPages={5}
+            totalPages={totalPages}
             onPageChange={(page) => setCurrentPage(page)}
           />
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Smazat článek"
+        description="Opravdu chcete smazat tento článek? Tato akce je nevratná."
+        variant="destructive"
+        footer={
+          <>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Smazat
+            </Button>
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
+              Zrušit
+            </Button>
+          </>
+        }
+      >
+        <div className="text-sm text-gray-600">
+          Vybraný článek bude trvale odstraněn ze systému.
+        </div>
+      </Modal>
     </div>
   );
 }

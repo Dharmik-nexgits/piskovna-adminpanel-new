@@ -30,3 +30,7 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.aie-container aie-footer {
+  display: none !important;
+}

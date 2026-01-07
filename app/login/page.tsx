@@ -34,7 +34,7 @@ export default function LoginPage() {
       credentials.email !== "admin@piskovna.com" ||
       credentials.password !== "Admin@123"
     ) {
-      setError("Invalid email or password");
+      setError("Neplatný e-mail nebo heslo");
       return;
     }
 
@@ -68,15 +68,15 @@ export default function LoginPage() {
             />
           </div>
           <h2 className="text-gray-500 text-lg mb-8">
-            Sign in to continue to Piskovna Admin.
+            Přihlaste se pro pokračování do administrace Pískovna.
           </h2>
 
           <form onSubmit={handleLogin} className="space-y-6 text-left">
             <Input
               id="email"
               type="email"
-              label="Email"
-              placeholder="Enter email"
+              label="E-mail"
+              placeholder="Zadejte e-mail"
               value={credentials.email}
               onChange={(e) =>
                 setCredentials({ ...credentials, email: e.target.value })
@@ -89,13 +89,13 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-semibold text-gray-700"
               >
-                Password
+                Heslo
               </label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
+                  placeholder="Zadejte heslo"
                   value={credentials.password}
                   onChange={(e) =>
                     setCredentials({ ...credentials, password: e.target.value })
@@ -124,7 +124,7 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" className="w-full" size="lg">
-              Log In
+              Přihlásit se
             </Button>
           </form>
           <div className="text-xs text-gray-400 text-center">

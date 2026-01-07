@@ -165,7 +165,7 @@ export default function DashboardSidebar({ collapsed }: DashboardSidebarProps) {
       {/* Footer / Version if needed */}
       {!collapsed && (
         <div className="text-xs text-gray-400 text-center">
-          © {new Date().getFullYear()} Piskovna
+          © {new Date().getFullYear()} Pískovna
         </div>
       )}
     </aside>

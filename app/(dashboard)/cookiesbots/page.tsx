@@ -3,11 +3,11 @@ export default function CookiesBotPage() {
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-secondary/20">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Cookiesbot Management
+          Správa Cookiesbot
         </h2>
         <p className="text-gray-600">
-          This module will allow you to manage cookie consents and scanner
-          configurations.
+          Tento modul vám umožní spravovat souhlasy s cookies a nastavení
+          skeneru.
         </p>
       </div>
     </div>

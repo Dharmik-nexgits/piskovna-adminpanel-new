@@ -23,9 +23,9 @@ export default function DashboardHeader({
     if (userData) {
       try {
         const parsed = JSON.parse(userData);
-        setUserEmail(parsed.email || "User");
+        setUserEmail(parsed.email || "Uživatel");
       } catch (e) {
-        setUserEmail("User");
+        setUserEmail("Uživatel");
       }
     }
   }, []);
@@ -37,14 +37,14 @@ export default function DashboardHeader({
   };
 
   const getPageTitle = (path: string) => {
-    if (path.startsWith("/blog/")) return "Blog Details";
+    if (path.startsWith("/blog/")) return "Detail článku";
     switch (path) {
       case "/blog":
         return "Blog";
       case "/cookiesbots":
         return "Cookiesbot";
       default:
-        return "Home";
+        return "Domů";
     }
   };
 
@@ -57,11 +57,11 @@ export default function DashboardHeader({
       items.push({ label: "Blog" });
     } else if (path.startsWith("/blog/")) {
       items.push({ label: "Blog", href: "/blog" });
-      items.push({ label: "Details" });
+      items.push({ label: "Detail" });
     } else if (path === "/cookiesbots") {
       items.push({ label: "Cookiesbot" });
     } else {
-      items.push({ label: "Home" });
+      items.push({ label: "Domů" });
     }
     return items;
   };
@@ -120,7 +120,7 @@ export default function DashboardHeader({
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-secondary/30 rounded-md cursor-pointer flex items-center gap-2 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
-                Logout
+                Odhlásit
               </button>
             </div>
           </div>

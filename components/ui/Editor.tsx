@@ -33,10 +33,39 @@ const EditorComponent = ({
 
     const editor = new AiEditor({
       element: divRef.current,
-
       lang: "en",
       placeholder: placeholder,
       content: value || "",
+      toolbarKeys: [
+        "undo",
+        "redo",
+        "brush",
+        "eraser",
+        "|",
+        "heading",
+        "font-size",
+        "|",
+        "bold",
+        "italic",
+        "underline",
+        "strike",
+        "link",
+        "hr",
+        "emoji",
+        "|",
+        "highlight",
+        "font-color",
+        "|",
+        "align",
+        "line-height",
+        "|",
+        "bullet-list",
+        "ordered-list",
+        "indent-decrease",
+        "indent-increase",
+        "|",
+        "fullscreen",
+      ],
       onChange: (ed: AiEditor) => {
         if (onChange) {
           const content = ed.getMarkdown ? ed.getMarkdown() : ed.getHtml();
@@ -53,7 +82,7 @@ const EditorComponent = ({
         editorRef.current = null;
       }
     };
-  }, []);
+  }, [onChange, placeholder, value]);
 
   return (
     <div className="space-y-2">
@@ -72,11 +101,6 @@ const EditorComponent = ({
         )}
       />
       {error && <p className="text-xs text-red-500">{error}</p>}
-      <style jsx global>{`
-        .aie-footer-bar {
-          display: none !important;
-        }
-      `}</style>
     </div>
   );
 };

@@ -12,7 +12,7 @@ export interface TagsInputProps {
 export function TagsInput({
   value = [],
   onChange,
-  placeholder = "Add tag...",
+  placeholder = "Přidat štítek...",
   label,
 }: TagsInputProps) {
   const [inputValue, setInputValue] = React.useState("");
