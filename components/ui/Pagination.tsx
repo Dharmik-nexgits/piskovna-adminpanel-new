@@ -18,7 +18,7 @@ export function Pagination({
 }: PaginationProps) {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
-  if (totalPages <= 1) return null;
+  if (totalPages < 1) return null;
 
   return (
     <div className={cn("flex items-center gap-2", className)}>

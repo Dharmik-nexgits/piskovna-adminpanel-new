@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { TagsInput } from "@/components/ui/TagsInput";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 import { ImageViewer } from "@/components/ui/ImageViewer";
@@ -24,15 +25,150 @@ const Editor = dynamic(() => import("@/components/ui/Editor"), {
   ssr: false,
 });
 
+import { useAppContext } from "@/contexts/AppContext";
+import { useRouter } from "next/navigation";
+import constants from "@/lib/constants";
+import { BlogPost } from "@/lib/types";
+
 export default function BlogDetailsPage() {
+  const { store, setStore, apiRequest } = useAppContext();
+  const router = useRouter();
   const params = useParams();
   const isNew = params.id === "new";
-  const [tags, setTags] = useState<string[]>(["Wine", "Tasting", "Events"]);
+
+  // Form State
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState(""); // Add slug state
+  const [description, setDescription] = useState(""); // Maps to 'description'
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaKeywords, setMetaKeywords] = useState("");
+  const [contentHtml1, setContentHtml1] = useState("");
+  const [contentHtml2, setContentHtml2] = useState("");
+
+  const [tags, setTags] = useState<string[]>([]);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  const [viewerImage, setViewerImage] = useState<string | null>(null);
 
+  const [status, setStatus] = useState("Publikováno");
+  const [category, setCategory] = useState("Education");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default today
+  const [showNewsletter, setShowNewsletter] = useState(true);
+
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!isNew && store.blogPosts) {
+      // API Logic Commented
+      /*
+      const fetchBlog = async () => {
+        const res = await apiRequest({
+          url: `${constants.apis.blog}/${params.id}`,
+          method: "GET",
+        });
+        if (res && "data" in res && (res as any).data.data) {
+          const post = (res as any).data.data;
+          setTitle(post.title || "");
+          setDescription(post.description || "");
+          setContentHtml1(post.content_html1 || "");
+          setContentHtml2(post.content_html2 || "");
+          setTags(post.tags || []);
+          setFeaturedImage(post.featured_image || null);
+          setGalleryImages(post.gallery_images || []);
+          setStatus(post.status || "Publikováno");
+          setCategory(post.category || "Education");
+          setDate(post.date || new Date().toISOString().split("T")[0]);
+        }
+      };
+      fetchBlog();
+      */
+
+      // State Logic
+      const postId = Number(params.id);
+      const post = (store.blogPosts as BlogPost[]).find((p) => p.id === postId);
+
+      if (post) {
+        setTitle(post.title || "");
+
+        setSlug(post.slug || ""); // Hydrate slug
+        setMetaTitle(post.meta_title || "");
+        setMetaKeywords(post.meta_keywords || "");
+        setDescription(post.description || "");
+        setContentHtml1(post.content_html1 || "");
+        setContentHtml2(post.content_html2 || "");
+        setTags(post.tags || []);
+        setFeaturedImage(post.featured_image || null);
+        setGalleryImages(post.gallery_images || []);
+        setStatus(post.status || "Publikováno");
+        setCategory(post.category || "Education");
+        setDate(post.date || new Date().toISOString().split("T")[0]);
+        setShowNewsletter(post.show_newsletter !== false);
+      }
+    }
+  }, [isNew, params.id, store.blogPosts]);
+
+  const handleSave = async () => {
+    const payload = {
+      title,
+      description,
+      content_html1: contentHtml1,
+      content_html2: contentHtml2,
+      tags,
+      featured_image: featuredImage,
+      gallery_images: galleryImages,
+      status,
+      category,
+      date,
+      show_newsletter: showNewsletter,
+      slug, // Add slug to payload
+
+      meta_title: metaTitle,
+      meta_keywords: metaKeywords,
+    };
+
+    // API Logic Commented
+    /*
+    if (isNew) {
+      await apiRequest({
+        url: constants.apis.blog,
+        method: "POST",
+        data: payload,
+      });
+    } else {
+      await apiRequest({
+        url: `${constants.apis.blog}/${params.id}`,
+        method: "PUT",
+        data: payload,
+      });
+    }
+    */
+
+    // State Logic
+    const currentPosts = Array.isArray(store.blogPosts)
+      ? (store.blogPosts as BlogPost[])
+      : [];
+    if (isNew) {
+      const newId =
+        currentPosts.length > 0
+          ? Math.max(...currentPosts.map((p) => p.id)) + 1
+          : 1;
+      const newPost = {
+        id: newId,
+        ...payload,
+        author: "Admin", // Hardcode
+        // slug used from payload
+      };
+      setStore({ blogPosts: [...currentPosts, newPost] }, true);
+    } else {
+      const postId = Number(params.id);
+      const updatedPosts = currentPosts.map((p) =>
+        p.id === postId ? { ...p, ...payload } : p,
+      );
+      setStore({ blogPosts: updatedPosts }, true);
+    }
+
+    router.push("/blog");
+  };
 
   const handleGalleryClick = () => {
     galleryInputRef.current?.click();
@@ -72,7 +208,10 @@ export default function BlogDetailsPage() {
               Zrušit
             </Button>
           </Link>
-          <Button className="gap-2 rounded-xl shadow-lg shadow-primary/25">
+          <Button
+            onClick={handleSave}
+            className="gap-2 rounded-xl shadow-lg shadow-primary/25"
+          >
             <Save className="w-4 h-4" />
             Uložit změny
           </Button>
@@ -97,7 +236,8 @@ export default function BlogDetailsPage() {
                   label="Název článku"
                   placeholder="Zadejte poutavý název..."
                   className="text-lg font-medium placeholder:font-normal"
-                  defaultValue={isNew ? "" : ""}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -105,6 +245,8 @@ export default function BlogDetailsPage() {
                   label="Meta titulek"
                   placeholder="SEO titulek (výchozí je název článku)"
                   className="rounded-xl"
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -112,6 +254,8 @@ export default function BlogDetailsPage() {
                   label="Meta klíčová slova"
                   placeholder="víno, ochutnávka, praha..."
                   className="rounded-xl"
+                  value={metaKeywords}
+                  onChange={(e) => setMetaKeywords(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -125,8 +269,9 @@ export default function BlogDetailsPage() {
                   <input
                     type="text"
                     placeholder="post-url-slug"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
                     className="flex-1 px-4 py-2.5 bg-transparent border-none focus:outline-none text-sm text-gray-600"
-                    defaultValue={isNew ? "" : ""}
                   />
                 </div>
               </div>
@@ -134,20 +279,20 @@ export default function BlogDetailsPage() {
                 <Editor
                   holder="blog-editor"
                   label="Popis"
-                  value={isNew ? "" : ""}
-                  onChange={(val) => console.log("Content changed:", val)}
+                  value={description}
+                  onChange={(val) => setDescription(val)}
                 />
                 <Editor
                   holder="blog-editor-html-1"
                   label="Popis HTML 1"
-                  value={isNew ? "" : ""}
-                  onChange={(val) => console.log("HTML 1 changed:", val)}
+                  value={contentHtml1}
+                  onChange={(val) => setContentHtml1(val)}
                 />
                 <Editor
                   holder="blog-editor-html-2"
                   label="Popis HTML 2"
-                  value={isNew ? "" : ""}
-                  onChange={(val) => console.log("HTML 2 changed:", val)}
+                  value={contentHtml2}
+                  onChange={(val) => setContentHtml2(val)}
                 />
               </div>
             </div>
@@ -172,10 +317,11 @@ export default function BlogDetailsPage() {
                     >
                       <Image
                         src={img}
-                        width={0}
-                        height={0}
+                        width={100}
+                        height={100}
                         alt={`Gallery ${idx}`}
                         className="w-full h-full object-cover"
+                        unoptimized // Important for blob URLs
                       />
                       <button
                         className="absolute top-0 right-0 p-1.5 text-red-500 cursor-pointer rounded-full hover:bg-red-50"
@@ -233,22 +379,27 @@ export default function BlogDetailsPage() {
               <Select
                 label="Stav"
                 options={[
-                  { value: "published", label: "Publikováno" },
-                  { value: "draft", label: "Koncept" },
-                  { value: "archived", label: "Archivováno" },
+                  { value: "Publikováno", label: "Publikováno" },
+                  { value: "Návrh", label: "Návrh" },
+                  { value: "Archivováno", label: "Archivováno" },
                 ]}
-                defaultValue="published"
+                value={status}
+                onChange={(val) => setStatus(val)}
               />
-              {/* <Select
-                label="Viditelnost"
-                options={[
-                  { value: "public", label: "Veřejné" },
-                  { value: "private", label: "Soukromé" },
-                  { value: "password", label: "Chráněno heslem" },
-                ]}
-                defaultValue="public"
-              /> */}
-              <DatePicker label="Datum publikování" defaultValue="2024-10-15" />
+              <DatePicker
+                label="Datum publikování"
+                value={date}
+                onChange={(e: {
+                  target: { value: React.SetStateAction<string> };
+                }) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="px-4 py-1 border-t border-gray-100 mt-2">
+              <Checkbox
+                label="Zobrazit Newsletter"
+                checked={showNewsletter}
+                onCheckedChange={setShowNewsletter}
+              />
             </div>
           </div>
 
@@ -261,20 +412,15 @@ export default function BlogDetailsPage() {
               <Select
                 label="Kategorie"
                 options={[
-                  { value: "education", label: "Vzdělávání" },
-                  { value: "news", label: "Novinky" },
-                  { value: "reviews", label: "Recenze" },
+                  { value: "Education", label: "Vzdělávání" },
+                  { value: "News", label: "Novinky" },
+                  { value: "Reviews", label: "Recenze" },
+                  { value: "Guides", label: "Průvodci" },
+                  { value: "Announcements", label: "Oznámení" },
                 ]}
-                defaultValue="education"
+                value={category}
+                onChange={(val) => setCategory(val)}
               />
-              {/* <Select
-                label="Autor"
-                options={[
-                  { value: "jan", label: "Jan Vokál" },
-                  { value: "admin", label: "Admin" },
-                ]}
-                defaultValue="jan"
-              /> */}
               <TagsInput
                 label="Štítky"
                 value={tags}

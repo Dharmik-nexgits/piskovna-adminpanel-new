@@ -27,6 +27,12 @@ const EditorComponent = ({
   const divRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<AiEditor | null>(null);
 
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   useEffect(() => {
     if (!divRef.current) return;
     if (editorRef.current) return;
@@ -67,9 +73,9 @@ const EditorComponent = ({
         "fullscreen",
       ],
       onChange: (ed: AiEditor) => {
-        if (onChange) {
+        if (onChangeRef.current) {
           const content = ed.getMarkdown ? ed.getMarkdown() : ed.getHtml();
-          onChange(content);
+          onChangeRef.current(content);
         }
       },
     });
@@ -82,7 +88,19 @@ const EditorComponent = ({
         editorRef.current = null;
       }
     };
-  }, [onChange, placeholder, value]);
+  }, []);
+
+  useEffect(() => {
+    if (editorRef.current && value !== undefined) {
+      const currentContent = editorRef.current.getMarkdown
+        ? editorRef.current.getMarkdown()
+        : editorRef.current.getHtml();
+
+      if (currentContent !== value) {
+        editorRef.current.setContent(value);
+      }
+    }
+  }, [value]);
 
   return (
     <div className="space-y-2">
