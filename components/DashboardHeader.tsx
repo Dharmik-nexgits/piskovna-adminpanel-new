@@ -1,17 +1,22 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Menu, User, LogOut, ChevronDown } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import constants from "@/lib/constants";
 
 interface DashboardHeaderProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  setMobileOpen: (open: boolean) => void;
 }
 
 export default function DashboardHeader({
   collapsed,
   setCollapsed,
+  setMobileOpen,
 }: DashboardHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -23,7 +28,7 @@ export default function DashboardHeader({
     if (userData) {
       try {
         const parsed = JSON.parse(userData);
-        setUserEmail(parsed.email || "Uživatel");
+        setUserEmail(parsed.username || "Uživatel");
       } catch (e) {
         setUserEmail("Uživatel");
       }
@@ -53,12 +58,12 @@ export default function DashboardHeader({
   const getBreadcrumbs = (path: string) => {
     // Simple logic for now, can be expanded
     const items = [];
-    if (path === "/blog") {
+    if (path === constants.route.blog) {
       items.push({ label: "Blog" });
     } else if (path.startsWith("/blog/")) {
-      items.push({ label: "Blog", href: "/blog" });
+      items.push({ label: "Blog", href: constants.route.blog });
       items.push({ label: "Detail" });
-    } else if (path === "/cookiesbots") {
+    } else if (path === constants.route.cookiesbots) {
       items.push({ label: "Cookiesbot" });
     } else {
       items.push({ label: "Domů" });
@@ -70,7 +75,13 @@ export default function DashboardHeader({
     <header className="bg-white h-16 border-b border-secondary/20 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10 shadow-sm">
       <div className="flex items-center gap-4">
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => {
+            if (window.innerWidth < 768) {
+              setMobileOpen(true);
+            } else {
+              setCollapsed(!collapsed);
+            }
+          }}
           className="p-2 rounded-md text-gray-500 hover:bg-brand-bg hover:text-primary transition-colors focus:outline-none"
         >
           <Menu className="w-6 h-6" />

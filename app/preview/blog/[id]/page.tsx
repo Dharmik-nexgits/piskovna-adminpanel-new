@@ -14,7 +14,7 @@ import { ImageViewer } from "@/components/ui/ImageViewer";
 
 export default function BlogPreviewPage() {
   const params = useParams();
-  const { store } = useAppContext();
+  const { apiRequest, store } = useAppContext();
   const idParam = params?.id;
   const decodedId = idParam ? decodeURIComponent(idParam as string) : "";
   const [openImageModal, setOpenImageModal] = useState({
@@ -27,24 +27,54 @@ export default function BlogPreviewPage() {
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
 
   useEffect(() => {
-    if (decodedId && Array.isArray(store.blogPosts)) {
-      // Try to find by ID (if numeric) or Slug (both raw and decoded)
-      const posts = store.blogPosts as BlogPost[];
-      const foundPost = posts.find((p) => {
-        const idMatch = p.id.toString() === decodedId;
-        const slugMatch = p.slug === decodedId || p.slug === idParam;
-        return idMatch || slugMatch;
-      });
+    const loadPost = async () => {
+      // First try to find in store
+      if (
+        decodedId &&
+        Array.isArray(store.blogPosts) &&
+        store.blogPosts.length > 0
+      ) {
+        const posts = store.blogPosts as BlogPost[];
+        const foundPost = posts.find((p) => {
+          const idMatch = p.id.toString() === decodedId;
+          const slugMatch = p.slug === decodedId || p.slug === idParam;
+          return idMatch || slugMatch;
+        });
 
-      if (foundPost) {
-        setPost(foundPost);
+        if (foundPost) {
+          setPost(foundPost);
+          setLoading(false);
+          return;
+        }
       }
-      setLoading(false);
-    } else if (store.blogPosts) {
-      // If store is loaded but no posts or no ID, stop loading
-      setLoading(false);
-    }
-  }, [decodedId, idParam, store.blogPosts]);
+
+      // If not in store or store empty, fetch from API
+      if (decodedId) {
+        try {
+          await apiRequest({
+            url: `/api/blog/${decodedId}`,
+            method: "GET",
+            onSuccess: (res: any) => {
+              if (res && res.data && res.data.data) {
+                setPost(res.data.data);
+              }
+            },
+            onError: (err: any) => {
+              console.error("Failed to fetch blog post", err);
+            },
+          });
+        } catch (e) {
+          console.error("Error fetching blog post", e);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    loadPost();
+  }, [decodedId, idParam, store.blogPosts, apiRequest]);
 
   const handlePrevGallery = () => {
     if (galleryStartIndex > 0) {
@@ -120,7 +150,13 @@ export default function BlogPreviewPage() {
                 src={post.featured_image || "/images/blogdetail_img.jpg"}
                 alt={post.title}
                 className="relative w-6/12 h-auto rounded-sm"
-                onClick={() => setOpenImageModal({ url: post.featured_image || "/images/blogdetail_img.jpg", index: 0, open: true })}
+                onClick={() =>
+                  setOpenImageModal({
+                    url: post.featured_image || "/images/blogdetail_img.jpg",
+                    index: 0,
+                    open: true,
+                  })
+                }
               />
               <div
                 className="para-fs-19 text-lg flex-1 wrap-break-word pb-4"
@@ -133,7 +169,7 @@ export default function BlogPreviewPage() {
           </div>
 
           {/* Content HTML 1 */}
-          {post.content_html1 && (
+          {post.descriptionhtml1 && (
             <div className="flex justify-center items-center w-full py-12">
               <div
                 className="flex justify-center items-center w-5/6 text-[#0b1f3b] whitespace-normal"
@@ -143,7 +179,7 @@ export default function BlogPreviewPage() {
                 <div
                   className="para-fs-19 max-w-full wrap-break-word"
                   dangerouslySetInnerHTML={{
-                    __html: post.content_html1,
+                    __html: post.descriptionhtml1,
                   }}
                 />
               </div>
@@ -153,7 +189,7 @@ export default function BlogPreviewPage() {
           {post.show_newsletter !== false && <NewsletterSection />}
 
           {/* Content HTML 2 */}
-          {post.content_html2 && (
+          {post.descriptionhtml2 && (
             <div className="flex justify-center items-center w-full py-12">
               <div
                 className="flex justify-center items-center w-5/6 text-[#0b1f3b] whitespace-normal"
@@ -163,7 +199,7 @@ export default function BlogPreviewPage() {
                 <div
                   className="para-fs-19 max-w-full wrap-break-word"
                   dangerouslySetInnerHTML={{
-                    __html: post.content_html2,
+                    __html: post.descriptionhtml2,
                   }}
                 />
               </div>

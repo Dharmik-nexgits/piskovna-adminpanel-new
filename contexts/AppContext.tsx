@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import constants from "../lib/constants";
 import Utils from "../lib/utils";
 import { BlogPost } from "../lib/types";
+import Loading from "@/app/loading";
 
 // --- Types ---
 
@@ -72,12 +73,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [store, updateStore] = useState<StoreState>(defaultContextValues);
   const [messageApi, contextHolder] = message.useMessage();
   const router = useRouter();
-
-  // Use a ref to track displayed error messages to prevent duplications,
-  // persisting across renders without causing re-renders itself.
   const displayedMessagesRef = useRef<Set<string>>(new Set());
 
-  // Hydrate state from cache on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const cachedVariables = Utils.getCachedVariables();
@@ -85,9 +82,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         setStore(cachedVariables);
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Debug logging
   useEffect(() => {
     if (constants.isDevelopmentMode) {
       console.log("Store Updated:", store);
@@ -101,7 +97,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       if (cache) {
         Object.keys(data).forEach((key) => {
           const value = data[key];
-          // Check if value is valid for storage (truthy, false, or 0)
           if (value || value === false || value === 0) {
             const encodedKey = window.btoa(key);
             const stringValue =
@@ -127,7 +122,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      // We log or handle the error here, but maybe not throw unless necessary
       console.error("Logout failed:", errorMessage);
     }
   }, [router, setStore]);
@@ -149,7 +143,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         ...rest
       } = apiParams;
 
-      // Helper to show errors with throttling
       const showErrorToast = (msg: string) => {
         if (!displayedMessagesRef.current.has(msg)) {
           displayedMessagesRef.current.add(msg);
@@ -170,20 +163,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           setStore({ isLoading: true });
         }
 
-        // Construct full URL
-        const fullUrl = url.startsWith("http")
-          ? url
-          : `${constants.imageHost}${url.startsWith("/") ? "" : "/"}${url}`;
-
-        // Get token from cache (legacy support) or headers
-        // Ideally we should rely on store.userdata, but keeping Utils fallback for safety
         const cachedUser = Utils.getCachedVariables("userdata");
         const token =
           ![constants.apis.login].includes(url) &&
           (cachedUser?.jwt || headers?.Authorization);
 
         const config: AxiosRequestConfig = {
-          url: fullUrl,
+          url,
           method,
           data,
           params,
@@ -202,7 +188,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
         const response = await axios.request(config);
 
-        // Handle logical errors in 200 responses if backend sends them this way
         if (response?.data?.errorResponse?.message) {
           const msg = response.data.errorResponse.message;
           showErrorToast(`API response error: ${msg}`);
@@ -220,7 +205,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         const error = e as AxiosError;
         const status = error.response?.status;
 
-        // Handle specific error codes
         if ([401, 403].includes(status as number) && !disableForbidden) {
           setStore({ userdata: null }, true);
           router.push(constants.route.login);
@@ -257,6 +241,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AppContext.Provider value={contextValue}>
       {contextHolder}
+      <Loading isLoading={store.isLoading} />
       {children}
     </AppContext.Provider>
   );

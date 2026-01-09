@@ -109,6 +109,89 @@ export const catchErrorResponse = (e: any) => {
   );
 };
 
+export interface ImageValidationRules {
+  width?: number;
+  height?: number;
+  ratio?: number;
+  tolerance?: number;
+  maxSizeInMB?: number;
+  allowedFormats?: string[];
+}
+
+export const validateImage = (
+  file: File,
+  rules: ImageValidationRules,
+): Promise<string | null> => {
+  return new Promise((resolve) => {
+    // Check file size
+    if (rules.maxSizeInMB) {
+      const fileSizeInMB = file.size / (1024 * 1024);
+      if (fileSizeInMB > rules.maxSizeInMB) {
+        resolve(
+          `Velikost souboru musí být menší než ${
+            rules.maxSizeInMB
+          } MB. Vaše velikost: ${fileSizeInMB.toFixed(2)} MB.`,
+        );
+        return;
+      }
+    }
+
+    // Check file format
+    if (rules.allowedFormats) {
+      if (!rules.allowedFormats.includes(file.type)) {
+        resolve(
+          `Nesprávný formát souboru. Povolené formáty: ${rules.allowedFormats
+            .map((f) => f.split("/")[1].toUpperCase())
+            .join(", ")}.`,
+        );
+        return;
+      }
+    }
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const { width, height } = img;
+
+      // Check specific dimensions if provided
+      if (rules.width && width !== rules.width) {
+        resolve(
+          `Šířka obrázku musí být přesně ${rules.width}pixelů. Nalezeno: ${width}pixelů.`,
+        );
+        return;
+      }
+
+      if (rules.height && height !== rules.height) {
+        resolve(
+          `Výška obrázku musí být přesně ${rules.height}pixelů. Nalezeno: ${height}pixelů.`,
+        );
+        return;
+      }
+
+      // Check aspect ratio if provided
+      if (rules.ratio) {
+        const currentRatio = width / height;
+        const tolerance = rules.tolerance || 0.01;
+        if (Math.abs(currentRatio - rules.ratio) > tolerance) {
+          resolve(`Vybraný obrázek tomuto požadavku neodpovídá.`);
+          return;
+        }
+      }
+
+      resolve(null);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve("Invalid image file.");
+    };
+
+    img.src = objectUrl;
+  });
+};
+
 export default {
   cn,
   isObject,
@@ -118,4 +201,5 @@ export default {
   catchErrorResponse,
   encodeBase64,
   decodeBase64,
+  validateImage,
 };

@@ -205,7 +205,7 @@ export default function DashboardSidebar({
 
       {/* Footer / Version if needed */}
       {(!collapsed || mobileOpen) && (
-        <div className="text-xs text-gray-400 text-center pb-4">
+        <div className="text-xs text-gray-400 text-center">
           © {new Date().getFullYear()} Pískovna
         </div>
       )}

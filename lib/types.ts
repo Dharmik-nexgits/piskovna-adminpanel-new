@@ -3,8 +3,8 @@ export interface BlogPost {
   title: string;
   slug: string;
   description: string;
-  content_html1: string;
-  content_html2: string;
+  descriptionhtml1: string;
+  descriptionhtml2: string;
   tags: string[];
   featured_image: string | null;
   gallery_images: string[];
@@ -15,4 +15,5 @@ export interface BlogPost {
   show_newsletter?: boolean;
   meta_title?: string;
   meta_keywords?: string;
+  aos_duration?: string;
 }

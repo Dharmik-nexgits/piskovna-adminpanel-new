@@ -30,28 +30,24 @@ import { BlogPost } from "@/lib/types";
 
 export default function BlogPage() {
   const { apiRequest, store, setStore } = useAppContext();
-  // const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]); // Using direct store now or syncing
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]); // Using direct store now or syncing
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<number | null>(null);
 
-  // const fetchBlogs = async () => {
-  //   const res = await apiRequest({
-  //     url: constants.apis.blog,
-  //     method: "GET",
-  //   });
-  //   if (res && "data" in res) {
-  //     setBlogPosts((res as any).data.data || []);
-  //   }
-  // };
+  const fetchBlogs = async () => {
+    const res = await apiRequest({
+      url: constants.apis.blog,
+      method: "GET",
+    });
+    if (res && "data" in res) {
+      setBlogPosts((res as any).data.data || []);
+    }
+  };
 
-  // useEffect(() => {
-  //   fetchBlogs();
-  // }, []);
-
-  const blogPosts = Array.isArray(store.blogPosts)
-    ? (store.blogPosts as BlogPost[])
-    : [];
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
 
   const itemsPerPage = 5;
   const totalPages = Math.ceil(blogPosts.length / itemsPerPage);
@@ -67,8 +63,6 @@ export default function BlogPage() {
 
   const confirmDelete = async () => {
     if (postToDelete) {
-      // API Call Commented
-      /*
       const res = await apiRequest({
         url: `${constants.apis.blog}/${postToDelete}`,
         method: "DELETE",
@@ -78,9 +72,7 @@ export default function BlogPage() {
         setDeleteModalOpen(false);
         setPostToDelete(null);
       }
-      */
 
-      // State Implementation
       const updatedPosts = blogPosts.filter((post) => post.id !== postToDelete);
       setStore({ blogPosts: updatedPosts }, true);
       setDeleteModalOpen(false);
@@ -90,8 +82,6 @@ export default function BlogPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header Section */}
-
       {/* Sub Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-b border-gray-100">
         <h2 className="text-lg font-semibold text-gray-700">
@@ -117,11 +107,6 @@ export default function BlogPage() {
                 {/* Header Titles */}
                 <TableRow className="bg-gray-50/50 border-b border-gray-200">
                   <TableHead className="min-w-62.5">Název</TableHead>
-                  <TableHead className="min-w-50">
-                    <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
-                      Autor <ChevronsUpDown className="w-3 h-3 text-gray-400" />
-                    </div>
-                  </TableHead>
                   <TableHead className="min-w-37.5">
                     <div className="flex items-center gap-1 cursor-pointer hover:text-primary">
                       Kategorie{" "}
@@ -159,14 +144,6 @@ export default function BlogPage() {
                     <Input
                       type="text"
                       className="h-8 text-xs bg-white"
-                      placeholder="Hledat autora..."
-                      icon={<Filter className="w-3 h-3" />}
-                    />
-                  </TableCell>
-                  <TableCell className="p-2">
-                    <Input
-                      type="text"
-                      className="h-8 text-xs bg-white"
                       icon={<Filter className="w-3 h-3" />}
                     />
                   </TableCell>
@@ -196,23 +173,9 @@ export default function BlogPage() {
                     className="hover:bg-brand-bg/10 transition-colors group border-b border-gray-50 last:border-b-0"
                   >
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 overflow-hidden shrink-0">
-                          <svg
-                            className="w-6 h-6"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                          </svg>
-                        </div>
-                        <div className="text-sm font-semibold text-primary group-hover:underline cursor-pointer">
-                          {post.title}
-                        </div>
+                      <div className="text-sm font-semibold text-primary group-hover:underline cursor-pointer">
+                        {post.title}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-gray-700 font-medium">
-                      {post.author}
                     </TableCell>
                     <TableCell className="text-gray-600">
                       {post.category}

@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Trash2,
   Plus,
+  UploadCloud,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -28,10 +29,11 @@ const Editor = dynamic(() => import("@/components/ui/Editor"), {
 import { useAppContext } from "@/contexts/AppContext";
 import { useRouter } from "next/navigation";
 import constants from "@/lib/constants";
-import { BlogPost } from "@/lib/types";
+import { validateImage } from "@/lib/utils";
+import { message } from "antd";
 
 export default function BlogDetailsPage() {
-  const { store, setStore, apiRequest } = useAppContext();
+  const { apiRequest } = useAppContext();
   const router = useRouter();
   const params = useParams();
   const isNew = params.id === "new";
@@ -53,66 +55,55 @@ export default function BlogDetailsPage() {
   const [category, setCategory] = useState("Education");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default today
   const [showNewsletter, setShowNewsletter] = useState(true);
+  const [aosDuration, setAosDuration] = useState("");
 
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    if (!isNew && store.blogPosts) {
-      // API Logic Commented
-      /*
+    if (!isNew) {
       const fetchBlog = async () => {
-        const res = await apiRequest({
-          url: `${constants.apis.blog}/${params.id}`,
-          method: "GET",
-        });
-        if (res && "data" in res && (res as any).data.data) {
-          const post = (res as any).data.data;
-          setTitle(post.title || "");
-          setDescription(post.description || "");
-          setContentHtml1(post.content_html1 || "");
-          setContentHtml2(post.content_html2 || "");
-          setTags(post.tags || []);
-          setFeaturedImage(post.featured_image || null);
-          setGalleryImages(post.gallery_images || []);
-          setStatus(post.status || "Publikováno");
-          setCategory(post.category || "Education");
-          setDate(post.date || new Date().toISOString().split("T")[0]);
+        try {
+          const res = await apiRequest({
+            url: `${constants.apis.blog}/${params.id}`,
+            method: "GET",
+          });
+          if (res && "data" in res && (res as any).data.data) {
+            const post = (res as any).data.data;
+            setTitle(post.title || "");
+            setSlug(post.slug || "");
+            setDescription(post.description || "");
+            setContentHtml1(post.descriptionhtml1 || "");
+            setContentHtml2(post.descriptionhtml2 || "");
+            setTags(post.tags || []);
+            setFeaturedImage(post.featured_image || null);
+            setGalleryImages(post.gallery_images || []);
+            setStatus(post.status || "Publikováno");
+            setCategory(post.category || "Education");
+            setDate(
+              post.date
+                ? new Date(post.date).toISOString().split("T")[0]
+                : new Date().toISOString().split("T")[0],
+            );
+            setShowNewsletter(post.show_newsletter !== false);
+            setMetaTitle(post.meta_title || "");
+            setMetaKeywords(post.meta_keywords || "");
+            setAosDuration(post.aos_duration || "");
+          }
+        } catch (error) {
+          console.error("Failed to fetch blog:", error);
         }
       };
       fetchBlog();
-      */
-
-      // State Logic
-      const postId = Number(params.id);
-      const post = (store.blogPosts as BlogPost[]).find((p) => p.id === postId);
-
-      if (post) {
-        setTitle(post.title || "");
-
-        setSlug(post.slug || ""); // Hydrate slug
-        setMetaTitle(post.meta_title || "");
-        setMetaKeywords(post.meta_keywords || "");
-        setDescription(post.description || "");
-        setContentHtml1(post.content_html1 || "");
-        setContentHtml2(post.content_html2 || "");
-        setTags(post.tags || []);
-        setFeaturedImage(post.featured_image || null);
-        setGalleryImages(post.gallery_images || []);
-        setStatus(post.status || "Publikováno");
-        setCategory(post.category || "Education");
-        setDate(post.date || new Date().toISOString().split("T")[0]);
-        setShowNewsletter(post.show_newsletter !== false);
-      }
     }
-  }, [isNew, params.id, store.blogPosts]);
+  }, [isNew, params.id, apiRequest]);
 
   const handleSave = async () => {
     const payload = {
       title,
       description,
-      content_html1: contentHtml1,
-      content_html2: contentHtml2,
+      descriptionhtml1: contentHtml1,
+      descriptionhtml2: contentHtml2,
       tags,
       featured_image: featuredImage,
       gallery_images: galleryImages,
@@ -120,68 +111,88 @@ export default function BlogDetailsPage() {
       category,
       date,
       show_newsletter: showNewsletter,
-      slug, // Add slug to payload
-
+      slug,
       meta_title: metaTitle,
       meta_keywords: metaKeywords,
+      aos_duration: aosDuration,
     };
 
-    // API Logic Commented
-    /*
-    if (isNew) {
-      await apiRequest({
-        url: constants.apis.blog,
-        method: "POST",
-        data: payload,
-      });
-    } else {
-      await apiRequest({
-        url: `${constants.apis.blog}/${params.id}`,
-        method: "PUT",
-        data: payload,
-      });
+    try {
+      if (isNew) {
+        await apiRequest({
+          url: constants.apis.blog,
+          method: "POST",
+          data: payload,
+        });
+      } else {
+        await apiRequest({
+          url: `${constants.apis.blog}/${params.id}`,
+          method: "PUT",
+          data: payload,
+        });
+      }
+      router.push("/blog");
+    } catch (error) {
+      console.error("Failed to save blog:", error);
     }
-    */
-
-    // State Logic
-    const currentPosts = Array.isArray(store.blogPosts)
-      ? (store.blogPosts as BlogPost[])
-      : [];
-    if (isNew) {
-      const newId =
-        currentPosts.length > 0
-          ? Math.max(...currentPosts.map((p) => p.id)) + 1
-          : 1;
-      const newPost = {
-        id: newId,
-        ...payload,
-        author: "Admin", // Hardcode
-        // slug used from payload
-      };
-      setStore({ blogPosts: [...currentPosts, newPost] }, true);
-    } else {
-      const postId = Number(params.id);
-      const updatedPosts = currentPosts.map((p) =>
-        p.id === postId ? { ...p, ...payload } : p,
-      );
-      setStore({ blogPosts: updatedPosts }, true);
-    }
-
-    router.push("/blog");
   };
 
   const handleGalleryClick = () => {
     galleryInputRef.current?.click();
   };
 
-  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const newImages = Array.from(files).map((file) =>
-        URL.createObjectURL(file),
-      );
-      setGalleryImages([...galleryImages, ...newImages]);
+      const validImages: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const error = await validateImage(file, {
+          ratio: 9 / 16,
+          maxSizeInMB: 5,
+          allowedFormats: [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/avif",
+          ],
+        });
+
+        if (error) {
+          message.error(
+            `Nahrajte prosím obrázek s poměrem stran 9:16. ${error}`,
+          );
+        } else {
+          validImages.push(URL.createObjectURL(file));
+        }
+      }
+
+      if (validImages.length > 0) {
+        setGalleryImages([...galleryImages, ...validImages]);
+      }
     }
+    e.target.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleGalleryFileChange({
+        target: {
+          files,
+        },
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   return (
@@ -222,15 +233,15 @@ export default function BlogDetailsPage() {
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-8">
           {/* General Information Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-6 overflow-hidden">
+            <div className="border-b border-gray-50 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <span className="w-1 h-6 bg-primary rounded-full"></span>
                 Obsah článku
               </h3>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
               <div className="space-y-2">
                 <Input
                   label="Název článku"
@@ -299,14 +310,14 @@ export default function BlogDetailsPage() {
           </div>
 
           {/* Gallery Section */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-6 overflow-hidden">
+            <div className="border-b border-gray-50 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-primary" />
                 Galerie článku
               </h3>
             </div>
-            <div className="p-6">
+            <div>
               {galleryImages.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {galleryImages.map((img, idx) => (
@@ -321,7 +332,7 @@ export default function BlogDetailsPage() {
                         height={100}
                         alt={`Gallery ${idx}`}
                         className="w-full h-full object-cover"
-                        unoptimized // Important for blob URLs
+                        unoptimized
                       />
                       <button
                         className="absolute top-0 right-0 p-1.5 text-red-500 cursor-pointer rounded-full hover:bg-red-50"
@@ -345,13 +356,29 @@ export default function BlogDetailsPage() {
                   </div>
                 </div>
               ) : (
+                // <div
+                //   onClick={handleGalleryClick}
+                //   className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-gray-50 transition-all group"
+                // >
+                //   <ImageIcon className="w-10 h-10 text-gray-300 group-hover:text-primary mb-3 transition-colors" />
+                //   <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">
+                //     Klikněte pro nahrání
+                //   </span>
+                // </div>
                 <div
                   onClick={handleGalleryClick}
-                  className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-gray-50 transition-all group"
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="border-2 border-dashed border-secondary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-brand-bg/50 transition-all group min-h-[200px]"
                 >
-                  <ImageIcon className="w-10 h-10 text-gray-300 group-hover:text-primary mb-3 transition-colors" />
-                  <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">
-                    Klikněte pro nahrání
+                  <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
+                    <UploadCloud className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                    Klikněte pro nahrání nebo přetáhněte sem
+                  </span>
+                  <span className="text-xs text-gray-400 mt-1">
+                    SVG, PNG, JPG nebo GIF (max. 5MB)
                   </span>
                 </div>
               )}
@@ -370,12 +397,11 @@ export default function BlogDetailsPage() {
         {/* Sidebar Column */}
         <div className="space-y-6">
           {/* Publish Status */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div className="p-4 border-b border-gray-50">
+          <div className="bg-white rounded-2xl shadow-sm border p-5 space-y-6 border-gray-100">
+            <div className="border-b border-gray-50">
               <h3 className="text-base font-bold text-gray-800">Publikování</h3>
             </div>
-
-            <div className="p-4 space-y-4">
+            <div className="space-y-4">
               <Select
                 label="Stav"
                 options={[
@@ -394,21 +420,19 @@ export default function BlogDetailsPage() {
                 }) => setDate(e.target.value)}
               />
             </div>
-            <div className="px-4 py-1 border-t border-gray-100 mt-2">
-              <Checkbox
-                label="Zobrazit Newsletter"
-                checked={showNewsletter}
-                onCheckedChange={setShowNewsletter}
-              />
-            </div>
+            <Checkbox
+              label="Zobrazit Newsletter"
+              checked={showNewsletter}
+              onCheckedChange={setShowNewsletter}
+            />
           </div>
 
           {/* Organization */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div className="p-4 border-b border-gray-50">
+          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-6 border border-gray-100">
+            <div className="border-b border-gray-50">
               <h3 className="text-base font-bold text-gray-800">Organizace</h3>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="space-y-4">
               <Select
                 label="Kategorie"
                 options={[
@@ -427,21 +451,41 @@ export default function BlogDetailsPage() {
                 onChange={setTags}
                 placeholder="Přidejte štítek a stiskněte Enter..."
               />
+              <Input
+                label="AOS Trvání"
+                placeholder="např. 1000"
+                value={aosDuration}
+                onChange={(e) => setAosDuration(e.target.value)}
+              />
             </div>
           </div>
 
           {/* Featured Image */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-50">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-6 overflow-hidden">
+            <div className="border-b border-gray-50">
               <h3 className="text-base font-bold text-gray-800">
                 Vybraný obrázek
               </h3>
             </div>
-
-            <div className="p-4">
+            <div>
               <ImageUploader
                 value={featuredImage}
                 onChange={setFeaturedImage}
+                validationRules={{
+                  ratio: 16 / 9,
+                  maxSizeInMB: 5,
+                  allowedFormats: [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp",
+                    "image/avif",
+                  ],
+                }}
+                onError={(msg) =>
+                  message.error(
+                    `Nahrajte prosím obrázek s poměrem stran 16:9. ${msg}`,
+                  )
+                }
               />
             </div>
           </div>
