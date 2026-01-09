@@ -22,7 +22,7 @@ export function ImageViewer({
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-51"
+        className="cursor-pointer absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-51"
       >
         <X className="w-6 h-6" />
       </button>

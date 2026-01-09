@@ -11,6 +11,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const router = useRouter();
 
@@ -26,15 +27,23 @@ export default function DashboardLayout({
   }, [router]);
 
   if (!authorized) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
-    <div className="flex bg-brand-bg min-h-screen font-sans text-foreground">
-      <DashboardSidebar collapsed={collapsed} />
+    <div className="flex bg-brand-bg h-screen overflow-hidden font-sans text-foreground">
+      <DashboardSidebar
+        collapsed={collapsed}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+      />
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        <DashboardHeader collapsed={collapsed} setCollapsed={setCollapsed} />
-        <main className="flex-1 p-6">{children}</main>
+        <DashboardHeader
+          collapsed={collapsed}
+          setCollapsed={setCollapsed}
+          setMobileOpen={setMobileOpen}
+        />
+        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

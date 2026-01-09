@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
+import constants from "@/lib/constants";
 
 export interface BreadcrumbItem {
   label: string;
@@ -22,7 +23,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
       )}
     >
       <Link
-        href="/"
+        href={constants.route.default}
         className="flex items-center hover:text-primary transition-colors"
       >
         <Home className="h-4 w-4" />

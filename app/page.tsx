@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Loading from "./loading";
+import { useAppContext } from "@/contexts/AppContext";
 
 export default function Home() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const contextValues = useAppContext();
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -16,12 +18,12 @@ export default function Home() {
     } else {
       router.replace("/login");
     }
-  }, [router]);
+    contextValues.setStore({ isLoading: false });
+  }, [contextValues.setStore, router]);
 
-  // While checking or redirecting, render nothing or a simple loader
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
-      {/* Optional: Add a spinner here */}
+      <Loading isLoading={contextValues.store.isLoading} />
     </div>
   );
 }

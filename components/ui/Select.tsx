@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SelectOption {
@@ -17,6 +17,7 @@ export interface SelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  onCancel?: () => void;
 }
 
 const Select = React.forwardRef<HTMLDivElement, SelectProps>(
@@ -31,6 +32,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       onChange,
       placeholder = "Vyberte...",
       disabled,
+      onCancel,
       ...props
     },
     ref,
@@ -101,12 +103,16 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             >
               {selectedLabel || placeholder}
             </span>
-            <ChevronDown
+            {onCancel && currentValue ? <X
               className={cn(
-                "h-4 w-4 text-gray-500 transition-transform duration-200",
+                "absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 transition-transform duration-200",
+              )} onClick={onCancel}
+            /> : <ChevronDown
+              className={cn(
+                "absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 transition-transform duration-200",
                 isOpen && "rotate-180",
               )}
-            />
+            />}
           </button>
 
           {isOpen && (

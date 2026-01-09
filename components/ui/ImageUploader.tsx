@@ -1,12 +1,14 @@
 import * as React from "react";
 import { Image as ImageIcon, X, UploadCloud } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, validateImage, ImageValidationRules } from "@/lib/utils";
 
 export interface ImageUploaderProps {
   value?: string | null;
   onChange: (value: string | null) => void;
   label?: string;
   className?: string;
+  validationRules?: ImageValidationRules;
+  onError?: (message: string) => void;
 }
 
 export function ImageUploader({
@@ -14,15 +16,37 @@ export function ImageUploader({
   onChange,
   label,
   className,
+  validationRules,
+  onError,
 }: ImageUploaderProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateAndUpload = async (file: File) => {
+    if (validationRules) {
+      const error = await validateImage(file, validationRules);
+      if (error) {
+        if (onError) {
+          onError(error);
+        } else {
+          alert(error);
+        }
+        return;
+      }
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      onChange(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      onChange(objectUrl);
+      await validateAndUpload(file);
     }
+    // Reset input so the same file selected again triggers change
+    e.target.value = "";
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -30,13 +54,12 @@ export function ImageUploader({
     e.stopPropagation();
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      onChange(objectUrl);
+      await validateAndUpload(file);
     }
   };
 

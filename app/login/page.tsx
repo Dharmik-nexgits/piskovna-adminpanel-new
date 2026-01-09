@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,54 +7,58 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useAppContext } from "@/contexts/AppContext";
+import constants from "@/lib/constants";
 
 export default function LoginPage() {
+  const contextValues = useAppContext();
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [credentials, setCredentials] = useState({
+    username: "",
+    password: "",
+  });
   const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is already logged in
     const token = localStorage.getItem("auth_token");
     const userData = localStorage.getItem("userdata");
 
     if (token && userData) {
       router.replace("/blog");
     } else {
-      setLoading(false);
+      contextValues.setStore({ isLoading: false });
     }
-  }, [router]);
+  }, [contextValues.setStore, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    contextValues.setStore({ isLoading: true });
 
-    if (
-      credentials.email !== "admin@piskovna.com" ||
-      credentials.password !== "Admin@123"
-    ) {
-      setError("Neplatný e-mail nebo heslo");
-      return;
-    }
+    await contextValues.apiRequest({
+      url: constants.apis.login,
+      method: "POST",
+      data: { ...credentials, usertype: "admin", request_form: "piskovna" },
+      onSuccess: (res) => {
+        const { token, user } = res.data;
+        console.log(res);
+        localStorage.setItem("auth_token", token);
+        localStorage.setItem("userdata", JSON.stringify(user));
+        contextValues.setStore({ isLoading: false });
+        contextValues.setStore({ userdata: user });
 
-    // Generate mock JWT token
-    const mockToken =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-      btoa(JSON.stringify({ email: credentials.email, id: Date.now() })) +
-      ".mocksignature_" +
-      Date.now();
-
-    // Store in localStorage as requested
-    localStorage.setItem("auth_token", mockToken);
-    localStorage.setItem("userdata", JSON.stringify(credentials));
-
-    // Redirect
-    router.replace("/blog");
+        router.replace("/blog");
+      },
+      onError: () => {
+        const msg = "Přihlášení se nezdařilo";
+        setError(msg);
+        contextValues.setStore({ isLoading: false });
+      },
+    });
   };
 
-  if (loading) return null;
+  if (contextValues.store.isLoading) return null;
 
   return (
     <div className="flex min-h-screen w-full">
@@ -73,13 +78,13 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-6 text-left">
             <Input
-              id="email"
+              id="username"
               type="email"
               label="E-mail"
               placeholder="Zadejte e-mail"
-              value={credentials.email}
+              value={credentials.username}
               onChange={(e) =>
-                setCredentials({ ...credentials, email: e.target.value })
+                setCredentials({ ...credentials, username: e.target.value })
               }
               required
             />
@@ -101,7 +106,7 @@ export default function LoginPage() {
                     setCredentials({ ...credentials, password: e.target.value })
                   }
                   required
-                  className="pr-10" // Make room for the eye icon
+                  className="pr-10"
                 />
                 <button
                   type="button"
