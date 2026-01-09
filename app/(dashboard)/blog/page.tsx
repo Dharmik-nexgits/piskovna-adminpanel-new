@@ -29,32 +29,52 @@ import { Modal } from "@/components/ui/Modal";
 import { BlogPost } from "@/lib/types";
 
 export default function BlogPage() {
-  const { apiRequest, store, setStore } = useAppContext();
+  const { apiRequest, setStore } = useAppContext();
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]); // Using direct store now or syncing
   const [currentPage, setCurrentPage] = useState(1);
+  const rowPerPage = 5;
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<number | null>(null);
+  const [filterTitle, setFilterTitle] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
-  const fetchBlogs = async () => {
-    const res = await apiRequest({
+  const fetchBlogPosts = async () => {
+    await apiRequest({
       url: constants.apis.blog,
-      method: "GET",
+      onSuccess: (res) => {
+        if (res && res.data && "data" in res.data) {
+          setBlogPosts((res.data as any).data || []);
+        } else {
+          setBlogPosts([]);
+        }
+      },
     });
-    if (res && "data" in res) {
-      setBlogPosts((res as any).data.data || []);
-    }
   };
 
   useEffect(() => {
-    fetchBlogs();
+    fetchBlogPosts();
   }, []);
 
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(blogPosts.length / itemsPerPage);
+  const filteredPosts = blogPosts.filter((post) => {
+    const matchTitle = post.title
+      ?.toLowerCase()
+      .includes(filterTitle.toLowerCase());
+    const matchCategory = post.category
+      ?.toLowerCase()
+      .includes(filterCategory.toLowerCase());
+    const matchStatus = post.status
+      ?.toLowerCase()
+      .includes(filterStatus.toLowerCase());
+    const matchDate = filterDate ? post.date === filterDate : true;
+    return matchTitle && matchCategory && matchStatus && matchDate;
+  });
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = blogPosts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPosts.length / rowPerPage);
+  const indexOfLastItem = currentPage * rowPerPage;
+  const indexOfFirstItem = indexOfLastItem - rowPerPage;
+  const currentItems = filteredPosts.slice(indexOfFirstItem, indexOfLastItem);
 
   const handleDeleteClick = (id: number) => {
     setPostToDelete(id);
@@ -138,31 +158,40 @@ export default function BlogPage() {
                       className="h-8 text-xs bg-white"
                       placeholder="Hledat název..."
                       icon={<Filter className="w-3 h-3" />}
+                      value={filterTitle}
+                      onChange={(e) => setFilterTitle(e.target.value)}
                     />
                   </TableCell>
                   <TableCell className="p-2">
                     <Input
                       type="text"
                       className="h-8 text-xs bg-white"
+                      placeholder="Kategorie..."
                       icon={<Filter className="w-3 h-3" />}
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
                     />
                   </TableCell>
                   <TableCell className="p-2">
                     <div className="relative">
-                      <div className="flex items-center w-full px-3 h-8 text-xs border border-secondary rounded-xl text-gray-400 cursor-pointer bg-white/50">
-                        <span className="truncate">Vybrat datum</span>
-                      </div>
-                      <CalendarIcon className="w-3 h-3 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                      <Input
+                        type="date"
+                        className="h-8 text-xs bg-white pr-8"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="p-2">
                     <Input
                       type="text"
                       className="h-8 text-xs bg-white"
+                      placeholder="Stav..."
                       icon={<Filter className="w-3 h-3" />}
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
                     />
                   </TableCell>
-                  <TableCell className="p-2"></TableCell>
                 </TableRow>
               </TableHeader>
 
@@ -234,9 +263,9 @@ export default function BlogPage() {
             {/* Footer / Pagination Placeholder */}
             <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
               <span>
-                Zobrazeno {Math.min(indexOfFirstItem + 1, blogPosts.length)} -{" "}
-                {Math.min(indexOfLastItem, blogPosts.length)} z{" "}
-                {blogPosts.length} záznamů
+                Zobrazeno {Math.min(indexOfFirstItem + 1, filteredPosts.length)}{" "}
+                - {Math.min(indexOfLastItem, filteredPosts.length)} z{" "}
+                {filteredPosts.length} záznamů
               </span>
               <Pagination
                 currentPage={currentPage}

@@ -141,6 +141,16 @@ export default function BlogDetailsPage() {
     galleryInputRef.current?.click();
   };
 
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleGalleryFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -166,7 +176,8 @@ export default function BlogDetailsPage() {
             `Nahrajte prosím obrázek s poměrem stran 9:16. ${error}`,
           );
         } else {
-          validImages.push(URL.createObjectURL(file));
+          const base64 = await readFileAsDataURL(file);
+          validImages.push(base64);
         }
       }
 

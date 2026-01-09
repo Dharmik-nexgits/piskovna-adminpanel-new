@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
+import { slugify } from "@/lib/utils";
+import fs from "fs";
+import path from "path";
+import { headers } from "next/headers";
 
 async function ensureTableExists() {
   const pool = await getPool();
@@ -9,7 +13,7 @@ async function ensureTableExists() {
     .query("SELECT * FROM sysobjects WHERE name='piskovnablog' AND xtype='U'");
 
   if (tableCheck.recordset.length === 0) {
-    // Create table
+    // Create table (Keep existing schema creation)
     const createTableQuery = `
       CREATE TABLE piskovnablog (
         id INT IDENTITY(1,1) PRIMARY KEY,
@@ -29,16 +33,20 @@ async function ensureTableExists() {
         meta_title NVARCHAR(MAX),
         meta_keywords NVARCHAR(MAX),
         aos_duration NVARCHAR(50),
+        view_id NVARCHAR(50), -- Added view_id column
         created_at DATETIME DEFAULT GETDATE()
       )
     `;
     await pool.request().query(createTableQuery);
   } else {
-    // Table exists, check/add missing columns
-    // We can just try adding columns and catch if they exist or check specifically
-    // Simple way: check for column 'author', 'aos_duration' etc
-
-    // Attempt to add author if missing
+    // Add view_id column if missing
+    try {
+      await pool
+        .request()
+        .query("ALTER TABLE piskovnablog ADD view_id NVARCHAR(50)");
+    } catch (e) {
+      /* ignore */
+    }
     try {
       await pool
         .request()
@@ -57,36 +65,108 @@ async function ensureTableExists() {
   }
 }
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+// Helper to save base64 image
+// Helper to save base64 image
+async function saveImage(
+  base64Data: string | null,
+  folder: string,
+  viewId: string,
+): Promise<string | null> {
+  if (!base64Data || !base64Data.startsWith("data:image")) {
+    console.log(
+      `[saveImage] Data is not base64 or empty. Starts with: ${base64Data?.substring(
+        0,
+        30,
+      )}...`,
+    );
+    return base64Data; // Return as is if url or null
+  }
+
+  try {
+    console.log(
+      `[saveImage] Processing base64 image for folder: ${folder}, viewId: ${viewId}`,
+    );
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return null;
+
+    const type = matches[1];
+    const buffer = Buffer.from(matches[2], "base64");
+    const extension = type.split("/")[1];
+    const filename = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}.${extension}`;
+
+    // Define upload directories
+    // User requested: "uploads ma main image folder" and "upload folder ma photogallry folder"
+    // AND "not in public". So we use root/uploads.
+    const uploadDir = path.join(process.cwd(), "uploads", folder, viewId);
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const filePath = path.join(uploadDir, filename);
+    fs.writeFileSync(filePath, buffer);
+
+    // Return URL accessible via our new API route
+    const publicUrl = `/api/uploads/${folder}/${viewId}/${filename}`;
+    console.log(`[saveImage] Saved file to: ${filePath}`);
+    console.log(`[saveImage] Returning URL: ${publicUrl}`);
+    return publicUrl;
+  } catch (error) {
+    console.error("[saveImage] Error saving image:", error);
+    return null;
+  }
+}
+
+export async function GET(request: Request) {
   try {
     const pool = await getPool();
 
-    // Attempt to select. If table doesn't exist, it might throw,
-    // but good practice to ensure it exists or handle error.
-    // For simplicity, we'll try to query. If it fails due to missing table, we returns empty or error.
-    // However, since we want to be robust, let's just run ensureTableExists() on POST or lazy load here.
-    // Let's rely on the POST to create it, OR trigger it once.
-    // To be safe and avoid "Invalid object name" error on first load:
+    // Get host for absolute URLs
+    const headersList = await headers();
+    const host = headersList.get("host") || "";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${host}`;
+
     try {
       const result = await pool
         .request()
-        .query("SELECT * FROM piskovnablog ORDER BY date DESC");
+        .query("SELECT * FROM piskovnablog ORDER BY id DESC");
       // Parse JSON fields
-      const blogs = result.recordset.map((blog: any) => ({
-        ...blog,
-        // Map DB columns back to frontend expected keys
-        descriptionhtml1: blog.descriptionhtml1,
-        descriptionhtml2: blog.descriptionhtml2,
-        tags: blog.tags ? JSON.parse(blog.tags) : [],
-        gallery_images: blog.gallery_images
-          ? JSON.parse(blog.gallery_images)
-          : [],
-        // Convert bit to boolean if needed, though mssql driver usually handles it or returns boolean
-        show_newsletter: blog.show_newsletter,
-        date: blog.date
-          ? new Date(blog.date).toISOString().split("T")[0]
-          : null,
-      }));
+      const blogs = result.recordset.map((blog: any) => {
+        // Parse gallery images
+        let gallery = [];
+        try {
+          gallery = blog.gallery_images ? JSON.parse(blog.gallery_images) : [];
+        } catch {
+          gallery = [];
+        }
+
+        // Prepend domain to images if they are relative paths
+        const processUrl = (url: string | null) => {
+          if (!url) return null;
+          if (url.startsWith("/")) return `${baseUrl}${url}`;
+          return url;
+        };
+
+        return {
+          ...blog,
+          // Map DB columns back to frontend expected keys
+          descriptionhtml1: blog.descriptionhtml1,
+          descriptionhtml2: blog.descriptionhtml2,
+          tags: blog.tags ? JSON.parse(blog.tags) : [],
+          featured_image: processUrl(blog.featured_image),
+          gallery_images: gallery.map((img: string) => processUrl(img)),
+          // Convert bit to boolean if needed, though mssql driver usually handles it or returns boolean
+          show_newsletter: blog.show_newsletter,
+          date: blog.date
+            ? new Date(blog.date).toISOString().split("T")[0]
+            : null,
+        };
+      });
       return NextResponse.json({ data: blogs });
     } catch (err: any) {
       if (err.message && err.message.includes("Invalid object name")) {
@@ -113,8 +193,8 @@ export async function POST(request: Request) {
       title,
       slug,
       description,
-      descriptionhtml1, // Frontend sends this
-      descriptionhtml2, // Frontend sends this
+      descriptionhtml1,
+      descriptionhtml2,
       tags,
       featured_image,
       gallery_images,
@@ -128,11 +208,38 @@ export async function POST(request: Request) {
       aos_duration,
     } = body;
 
+    let finalSlug = slug;
+    if (!finalSlug || finalSlug.trim() === "") {
+      finalSlug = slugify(title || "");
+    }
+    if (!finalSlug || finalSlug.trim() === "") {
+      finalSlug = `post-${Date.now()}`;
+    }
+
+    // Generate View ID
+    const viewId =
+      Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+    // Process Images
+    const savedFeaturedImage = await saveImage(
+      featured_image,
+      "mainimage",
+      viewId,
+    );
+
+    const savedGalleryImages = [];
+    if (gallery_images && Array.isArray(gallery_images)) {
+      for (const img of gallery_images) {
+        const saved = await saveImage(img, "photogallery", viewId);
+        if (saved) savedGalleryImages.push(saved);
+      }
+    }
+
     const pool = await getPool();
     const result = await pool
       .request()
       .input("title", sql.NVarChar(sql.MAX), title || null)
-      .input("slug", sql.NVarChar(sql.MAX), slug || null)
+      .input("slug", sql.NVarChar(sql.MAX), finalSlug)
       .input("description", sql.NVarChar(sql.MAX), description || null)
       .input(
         "descriptionhtml1",
@@ -145,11 +252,15 @@ export async function POST(request: Request) {
         descriptionhtml2 || null,
       )
       .input("tags", sql.NVarChar(sql.MAX), JSON.stringify(tags || []))
-      .input("featured_image", sql.NVarChar(sql.MAX), featured_image || null)
+      .input(
+        "featured_image",
+        sql.NVarChar(sql.MAX),
+        savedFeaturedImage || null,
+      )
       .input(
         "gallery_images",
         sql.NVarChar(sql.MAX),
-        JSON.stringify(gallery_images || []),
+        JSON.stringify(savedGalleryImages || []),
       )
       .input("date", sql.DateTime, date ? new Date(date) : new Date())
       .input("author", sql.NVarChar(sql.MAX), author || null)
@@ -166,17 +277,18 @@ export async function POST(request: Request) {
         "aos_duration",
         sql.NVarChar(50),
         aos_duration && aos_duration !== "" ? String(aos_duration) : null,
-      ).query(`
+      )
+      .input("view_id", sql.NVarChar(50), viewId).query(`
         INSERT INTO piskovnablog (
           title, slug, description, descriptionhtml1, descriptionhtml2, tags, 
           featured_image, gallery_images, date, author, category, status, 
-          show_newsletter, meta_title, meta_keywords, aos_duration
+          show_newsletter, meta_title, meta_keywords, aos_duration, view_id
         )
         OUTPUT INSERTED.id
         VALUES (
           @title, @slug, @description, @descriptionhtml1, @descriptionhtml2, @tags, 
           @featured_image, @gallery_images, @date, @author, @category, @status, 
-          @show_newsletter, @meta_title, @meta_keywords, @aos_duration
+          @show_newsletter, @meta_title, @meta_keywords, @aos_duration, @view_id
         )
       `);
 

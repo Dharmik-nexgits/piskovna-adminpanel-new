@@ -33,8 +33,11 @@ export function ImageUploader({
         return;
       }
     }
-    const objectUrl = URL.createObjectURL(file);
-    onChange(objectUrl);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      onChange(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
