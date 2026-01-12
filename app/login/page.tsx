@@ -42,7 +42,6 @@ export default function LoginPage() {
       data: { ...credentials, usertype: "admin", request_form: "piskovna" },
       onSuccess: (res) => {
         const { token, user } = res.data;
-        console.log(res);
         localStorage.setItem("auth_token", token);
         localStorage.setItem("userdata", JSON.stringify(user));
         contextValues.setStore({ isLoading: false });

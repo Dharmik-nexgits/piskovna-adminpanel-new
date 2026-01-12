@@ -1,7 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/AppContext";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -9,7 +9,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import NewsletterSection from "@/components/NewsletterSection";
 import { BlogPost } from "@/lib/types";
-import { Modal } from "@/components/ui/Modal";
 import { ImageViewer } from "@/components/ui/ImageViewer";
 
 export default function BlogPreviewPage() {
@@ -28,7 +27,6 @@ export default function BlogPreviewPage() {
 
   useEffect(() => {
     const loadPost = async () => {
-      // First try to find in store
       if (
         decodedId &&
         Array.isArray(store.blogPosts) &&
@@ -48,18 +46,17 @@ export default function BlogPreviewPage() {
         }
       }
 
-      // If not in store or store empty, fetch from API
       if (decodedId) {
         try {
           await apiRequest({
             url: `/api/blog/${decodedId}`,
             method: "GET",
-            onSuccess: (res: any) => {
+            onSuccess: (res) => {
               if (res && res.data && res.data.data) {
                 setPost(res.data.data);
               }
             },
-            onError: (err: any) => {
+            onError: (err) => {
               console.error("Failed to fetch blog post", err);
             },
           });
@@ -139,7 +136,7 @@ export default function BlogPreviewPage() {
           </div>
           <div className="p-6 bg-brand-bg rounded-sm space-y-4">
             <div className="space-y-2" data-aos="fade-up">
-              <h2 className="text-[#0b1f3b] mb-[15px] lg:text-4xl text-2xl font-bold">
+              <h2 className="text-[#0b1f3b] mb-3.75 lg:text-4xl text-2xl font-bold">
                 {post.title}
               </h2>
               <p className="text-[#0b1f3b] para-fs-19">{post.date}</p>
@@ -147,19 +144,24 @@ export default function BlogPreviewPage() {
             <div className="flex h-full justify-between items-end gap-6">
               <img
                 data-aos="fade-up"
-                src={post.featured_image || "/images/blogdetail_img.jpg"}
+                src={
+                  `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` ||
+                  "/images/blogdetail_img.jpg"
+                }
                 alt={post.title}
                 className="relative w-6/12 h-auto rounded-sm"
                 onClick={() =>
                   setOpenImageModal({
-                    url: post.featured_image || "/images/blogdetail_img.jpg",
+                    url:
+                      `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` ||
+                      "/images/blogdetail_img.jpg",
                     index: 0,
                     open: true,
                   })
                 }
               />
               <div
-                className="para-fs-19 text-lg flex-1 wrap-break-word pb-4"
+                className="para-fs-19 text-lg flex-1 wrap-break-word pb-4 blog-content"
                 data-aos="fade-up"
                 dangerouslySetInnerHTML={{
                   __html: post.description || "No content available",
@@ -170,14 +172,14 @@ export default function BlogPreviewPage() {
 
           {/* Content HTML 1 */}
           {post.descriptionhtml1 && (
-            <div className="flex justify-center items-center w-full py-12">
+            <div className="flex items-center w-full py-12 px-14">
               <div
                 className="flex justify-center items-center w-5/6 text-[#0b1f3b] whitespace-normal"
                 data-aos="fade-up"
                 data-aos-duration="1000"
               >
                 <div
-                  className="para-fs-19 max-w-full wrap-break-word"
+                  className="para-fs-19 max-w-full wrap-break-word blog-content"
                   dangerouslySetInnerHTML={{
                     __html: post.descriptionhtml1,
                   }}
@@ -190,14 +192,14 @@ export default function BlogPreviewPage() {
 
           {/* Content HTML 2 */}
           {post.descriptionhtml2 && (
-            <div className="flex justify-center items-center w-full py-12">
+            <div className="flex items-center w-full py-12 px-14">
               <div
-                className="flex justify-center items-center w-5/6 text-[#0b1f3b] whitespace-normal"
+                className="flex items-center w-5/6 text-[#0b1f3b] whitespace-normal"
                 data-aos="fade-up"
                 data-aos-duration="1000"
               >
                 <div
-                  className="para-fs-19 max-w-full wrap-break-word"
+                  className="para-fs-19 max-w-full wrap-break-word blog-content"
                   dangerouslySetInnerHTML={{
                     __html: post.descriptionhtml2,
                   }}
@@ -217,14 +219,12 @@ export default function BlogPreviewPage() {
                       key={i}
                       className="bg-[#D6D1C4] w-full h-full relative group cursor-pointer overflow-hidden"
                     >
-                      <Image
-                        src={img}
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_BASE_URL}/${img}`}
                         alt={`Gallery ${i}`}
-                        fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        unoptimized={img.startsWith("blob:")}
                         onClick={() =>
-                          setOpenImageModal({ url: img, index: i, open: true })
+                          setOpenImageModal({ url: `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`, index: i, open: true })
                         }
                       />
                     </div>
@@ -265,7 +265,7 @@ export default function BlogPreviewPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#e7dcd1] font-sans text-[#103758]">
+      <div className="min-h-screen bg-[#e7dcd1] para-fs-19 text-gray-900">
         {renderContent()}
       </div>
       <ImageViewer

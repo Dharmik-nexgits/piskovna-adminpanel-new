@@ -2,7 +2,7 @@ import React from "react";
 
 export default function NewsletterSection() {
   return (
-    <div className="relative w-full max-w-[1200px] mx-auto rounded-sm overflow-hidden h-[490px] mb-12">
+    <div className="relative w-full max-w-300 mx-auto rounded-sm overflow-hidden h-122.5 mb-12">
       <div
         className="absolute inset-0 z-0"
         style={{

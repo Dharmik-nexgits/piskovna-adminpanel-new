@@ -76,8 +76,8 @@ export default function BlogDetailsPage() {
             setContentHtml1(post.descriptionhtml1 || "");
             setContentHtml2(post.descriptionhtml2 || "");
             setTags(post.tags || []);
-            setFeaturedImage(post.featured_image || null);
-            setGalleryImages(post.gallery_images || []);
+            setFeaturedImage(`${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` || null);
+            setGalleryImages(post.gallery_images ? post.gallery_images.map((img: string) => `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`) : []);
             setStatus(post.status || "Publikováno");
             setCategory(post.category || "Education");
             setDate(

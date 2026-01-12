@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
-import { headers } from "next/headers";
 
 export async function GET(
   request: Request,
@@ -9,12 +8,10 @@ export async function GET(
   try {
     const { id } = await params;
     const pool = await getPool();
-
     let query = "SELECT * FROM piskovnablog WHERE id = @id";
     let inputType = sql.Int;
     let inputVal: string | number = id;
 
-    // Check if id is numeric
     if (isNaN(Number(id))) {
       query = "SELECT * FROM piskovnablog WHERE slug = @id";
       inputType = sql.NVarChar;
@@ -32,29 +29,16 @@ export async function GET(
 
     const blog = result.recordset[0];
 
-    // Get host for absolute URLs
-    const headersList = await headers();
-    const host = headersList.get("host") || "";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${host}`;
-
-    // Prepend domain to images if they are relative paths
-    const processUrl = (url: string | null) => {
-      if (!url) return null;
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      return url;
-    };
-
     const formattedBlog = {
       ...blog,
       descriptionhtml1: blog.descriptionhtml1,
       descriptionhtml2: blog.descriptionhtml2,
       tags: blog.tags ? JSON.parse(blog.tags) : [],
-      featured_image: processUrl(blog.featured_image),
+      featured_image: blog.featured_image,
       gallery_images: (blog.gallery_images
         ? JSON.parse(blog.gallery_images)
         : []
-      ).map((img: string) => processUrl(img)),
+      ).map((img: string) => img),
       show_newsletter: blog.show_newsletter,
       date: blog.date ? new Date(blog.date).toISOString().split("T")[0] : null,
     };
@@ -72,13 +56,12 @@ export async function GET(
 import fs from "fs";
 import path from "path";
 
-// Helper to save base64 image
 async function saveImage(
   base64Data: string | null,
   folder: string,
   viewId: string,
 ): Promise<string | null> {
-  if (!base64Data || !base64Data.startsWith("data:image")) return base64Data; // Return as is if url or null
+  if (!base64Data || !base64Data.startsWith("data:image")) return base64Data;
 
   try {
     const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -91,7 +74,6 @@ async function saveImage(
       .toString(36)
       .substring(7)}.${extension}`;
 
-    // Define upload directories: root/uploads
     const uploadDir = path.join(process.cwd(), "uploads", folder, viewId);
 
     if (!fs.existsSync(uploadDir)) {
@@ -101,27 +83,34 @@ async function saveImage(
     const filePath = path.join(uploadDir, filename);
     fs.writeFileSync(filePath, buffer);
 
-    // Return URL accessible via our new API route
-    return `/api/uploads/${folder}/${viewId}/${filename}`;
+    return `uploads/${folder}/${viewId}/${filename}`;
   } catch (error) {
     console.error("Error saving image:", error);
     return null;
   }
 }
 
-// Helper to delete file from filesystem
 const deleteFile = (fileUrl: string) => {
-  if (!fileUrl || !fileUrl.startsWith("/api/uploads")) return;
+  if (!fileUrl) return;
 
   try {
-    // URL: /api/uploads/folder/viewId/filename
-    const parts = fileUrl.split("/");
-    // parts: ['', 'api', 'uploads', 'folder', 'viewId', 'filename']
-    if (parts.length < 6) return;
+    let relativePath = fileUrl;
+    // Normalize path
+    if (fileUrl.startsWith("/api/")) {
+      relativePath = fileUrl.substring(5); // Remove "/api/"
+    } else if (fileUrl.startsWith("/")) {
+      relativePath = fileUrl.substring(1);
+    }
 
-    const folder = parts[3];
-    const viewId = parts[4];
-    const filename = parts[5];
+    if (!relativePath.startsWith("uploads/")) return;
+
+    const parts = relativePath.split("/");
+    // parts: [0]: uploads, [1]: folder, [2]: viewid, [3]: filename
+    if (parts.length < 4) return;
+
+    const folder = parts[1];
+    const viewId = parts[2];
+    const filename = parts[3];
 
     const filePath = path.join(
       process.cwd(),
@@ -140,7 +129,6 @@ const deleteFile = (fileUrl: string) => {
   }
 };
 
-// Helper to delete entire view_id folder
 const deleteFolder = (folder: string, viewId: string) => {
   try {
     const dirPath = path.join(process.cwd(), "uploads", folder, viewId);
@@ -191,7 +179,6 @@ export async function PUT(
       inputVal = id;
     }
 
-    // Retrieve existing view_id and data for cleanup (also need featured_image etc)
     const existingRes = await pool
       .request()
       .input("id_lookup", inputType, inputVal)
@@ -210,42 +197,56 @@ export async function PUT(
         Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
     }
 
-    // Process Images
-    const savedFeaturedImage = await saveImage(
+    const stripDomain = (url: string | null) => {
+      if (!url) return null;
+      try {
+        let cleanUrl = url;
+        if (url.startsWith("http")) {
+          const urlObj = new URL(url);
+          cleanUrl = urlObj.pathname;
+        }
+
+        // Remove /api/ prefix if present
+        if (cleanUrl.startsWith("/api/")) {
+          cleanUrl = cleanUrl.substring(5); // Remove "/api/"
+        } else if (cleanUrl.startsWith("/uploads/")) {
+          cleanUrl = cleanUrl.substring(1);
+        }
+
+        return cleanUrl;
+      } catch (e) {
+        return url;
+      }
+    };
+
+    let savedFeaturedImage = await saveImage(
       featured_image,
       "mainimage",
       viewId,
     );
+    savedFeaturedImage = stripDomain(savedFeaturedImage);
 
     const savedGalleryImages = [];
     if (gallery_images && Array.isArray(gallery_images)) {
       for (const img of gallery_images) {
-        const saved = await saveImage(img, "photogallery", viewId);
+        let saved = await saveImage(img, "photogallery", viewId);
+        saved = stripDomain(saved);
         if (saved) savedGalleryImages.push(saved);
       }
     }
 
-    // Cleanup Logic [PUT]
     if (existingBlog) {
-      // 1. Featured Image Replaced?
       if (
         existingBlog.featured_image &&
-        savedFeaturedImage &&
-        existingBlog.featured_image !== savedFeaturedImage
+        savedFeaturedImage !== existingBlog.featured_image
       ) {
-        // Check if user is not just re-sending the same URL (which saveImage returns as is)
-        // saveImage returns new URL if base64, or same URL if not.
-        // If they are different, it means the old one is replaced by a new one (base64 -> new url)
-        // or explicitly changed to null (though savedFeaturedImage might be null).
         deleteFile(existingBlog.featured_image);
       }
 
-      // 2. Gallery Images Removed?
       const oldGallery = existingBlog.gallery_images
         ? JSON.parse(existingBlog.gallery_images)
         : [];
       if (Array.isArray(oldGallery)) {
-        // Find images in oldGallery that are NOT in savedGalleryImages
         for (const oldImg of oldGallery) {
           if (!savedGalleryImages.includes(oldImg)) {
             deleteFile(oldImg);

@@ -67,20 +67,29 @@ async function ensureTableExists() {
 
 export const dynamic = "force-dynamic";
 
-// Helper to save base64 image
-// Helper to save base64 image
 async function saveImage(
   base64Data: string | null,
   folder: string,
   viewId: string,
 ): Promise<string | null> {
   if (!base64Data || !base64Data.startsWith("data:image")) {
-    console.log(
-      `[saveImage] Data is not base64 or empty. Starts with: ${base64Data?.substring(
-        0,
-        30,
-      )}...`,
-    );
+    if (typeof base64Data === "string") {
+      let cleanUrl = base64Data;
+      try {
+        if (cleanUrl.startsWith("http")) {
+          cleanUrl = new URL(cleanUrl).pathname;
+        }
+        if (cleanUrl.startsWith("/api/")) {
+          cleanUrl = cleanUrl.substring(5);
+        }
+        if (cleanUrl.startsWith("/")) {
+          cleanUrl = cleanUrl.substring(1);
+        }
+        return cleanUrl;
+      } catch (e) {
+        return base64Data;
+      }
+    }
     return base64Data; // Return as is if url or null
   }
 
@@ -110,8 +119,8 @@ async function saveImage(
     const filePath = path.join(uploadDir, filename);
     fs.writeFileSync(filePath, buffer);
 
-    // Return URL accessible via our new API route
-    const publicUrl = `/api/uploads/${folder}/${viewId}/${filename}`;
+    // Return relative path for DB storage
+    const publicUrl = `uploads/${folder}/${viewId}/${filename}`;
     console.log(`[saveImage] Saved file to: ${filePath}`);
     console.log(`[saveImage] Returning URL: ${publicUrl}`);
     return publicUrl;
@@ -121,15 +130,9 @@ async function saveImage(
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const pool = await getPool();
-
-    // Get host for absolute URLs
-    const headersList = await headers();
-    const host = headersList.get("host") || "";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${host}`;
 
     try {
       const result = await pool
@@ -137,7 +140,6 @@ export async function GET(request: Request) {
         .query("SELECT * FROM piskovnablog ORDER BY id DESC");
       // Parse JSON fields
       const blogs = result.recordset.map((blog: any) => {
-        // Parse gallery images
         let gallery = [];
         try {
           gallery = blog.gallery_images ? JSON.parse(blog.gallery_images) : [];
@@ -145,22 +147,13 @@ export async function GET(request: Request) {
           gallery = [];
         }
 
-        // Prepend domain to images if they are relative paths
-        const processUrl = (url: string | null) => {
-          if (!url) return null;
-          if (url.startsWith("/")) return `${baseUrl}${url}`;
-          return url;
-        };
-
         return {
           ...blog,
-          // Map DB columns back to frontend expected keys
           descriptionhtml1: blog.descriptionhtml1,
           descriptionhtml2: blog.descriptionhtml2,
           tags: blog.tags ? JSON.parse(blog.tags) : [],
-          featured_image: processUrl(blog.featured_image),
-          gallery_images: gallery.map((img: string) => processUrl(img)),
-          // Convert bit to boolean if needed, though mssql driver usually handles it or returns boolean
+          featured_image: blog.featured_image,
+          gallery_images: gallery.map((img: string) => img),
           show_newsletter: blog.show_newsletter,
           date: blog.date
             ? new Date(blog.date).toISOString().split("T")[0]
@@ -170,7 +163,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: blogs });
     } catch (err: any) {
       if (err.message && err.message.includes("Invalid object name")) {
-        // Table doesn't exist, return empty array
         return NextResponse.json({ data: [] });
       }
       throw err;

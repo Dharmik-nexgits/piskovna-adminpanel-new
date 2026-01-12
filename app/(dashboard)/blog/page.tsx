@@ -8,7 +8,6 @@ import Image from "next/image";
 import {
   Plus,
   Filter,
-  Calendar as CalendarIcon,
   ChevronsUpDown,
   Pencil,
   Trash2,
@@ -45,7 +44,7 @@ export default function BlogPage() {
       url: constants.apis.blog,
       onSuccess: (res) => {
         if (res && res.data && "data" in res.data) {
-          setBlogPosts((res.data as any).data || []);
+          setBlogPosts((res.data as BlogPost).data || []);
         } else {
           setBlogPosts([]);
         }
@@ -82,10 +81,14 @@ export default function BlogPage() {
   };
 
   const confirmDelete = async () => {
+    setStore({ isLoading: true });
+    setDeleteModalOpen(false);
     if (postToDelete) {
       const res = await apiRequest({
         url: `${constants.apis.blog}/${postToDelete}`,
         method: "DELETE",
+        onSuccess: () => setStore({ isLoading: false }),
+        onError: () => setStore({ isLoading: false }),
       });
       if (res) {
         setBlogPosts(blogPosts.filter((post) => post.id !== postToDelete));

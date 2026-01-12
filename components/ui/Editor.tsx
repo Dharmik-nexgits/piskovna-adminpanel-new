@@ -74,7 +74,7 @@ const EditorComponent = ({
       ],
       onChange: (ed: AiEditor) => {
         if (onChangeRef.current) {
-          const content = ed.getMarkdown ? ed.getMarkdown() : ed.getHtml();
+          const content = ed.getHtml();
           onChangeRef.current(content);
         }
       },
@@ -92,9 +92,7 @@ const EditorComponent = ({
 
   useEffect(() => {
     if (editorRef.current && value !== undefined) {
-      const currentContent = editorRef.current.getMarkdown
-        ? editorRef.current.getMarkdown()
-        : editorRef.current.getHtml();
+      const currentContent = editorRef.current.getHtml();
 
       if (currentContent !== value) {
         editorRef.current.setContent(value);
@@ -113,7 +111,7 @@ const EditorComponent = ({
         ref={divRef}
         id={holder}
         className={cn(
-          "rounded-xl border border-secondary bg-white/50 overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all",
+          "rounded-xl border border-secondary bg-white/50 overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all para-fs-19",
           error && "border-red-500 focus-within:ring-red-200",
           className,
         )}

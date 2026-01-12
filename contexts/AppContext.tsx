@@ -19,7 +19,7 @@ import Loading from "@/app/loading";
 
 export interface UserData {
   jwt?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | object | undefined | null;
 }
 
 export interface HeaderData {
@@ -33,7 +33,7 @@ export interface StoreState {
   userdata: UserData | Record<string, never> | null;
   headerData: HeaderData;
   blogPosts?: BlogPost[];
-  [key: string]: any;
+  [key: string]: string | number | boolean | object | undefined | null;
 }
 
 export interface AppContextType {
