@@ -29,7 +29,7 @@ import { BlogPost } from "@/lib/types";
 
 export default function BlogPage() {
   const { apiRequest, setStore } = useAppContext();
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]); // Using direct store now or syncing
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowPerPage = 5;
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -43,7 +43,7 @@ export default function BlogPage() {
     await apiRequest({
       url: constants.apis.blog,
       onSuccess: (res) => {
-        if (res && res.data && "data" in res.data) {
+        if (res && res.data) {
           setBlogPosts((res.data as BlogPost).data || []);
         } else {
           setBlogPosts([]);

@@ -1,4 +1,5 @@
 export interface BlogPost {
+  data: never[];
   id: number;
   title: string;
   slug: string;
