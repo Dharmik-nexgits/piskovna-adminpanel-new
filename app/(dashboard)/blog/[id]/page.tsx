@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState } from "react";
@@ -76,8 +77,21 @@ export default function BlogDetailsPage() {
             setContentHtml1(post.descriptionhtml1 || "");
             setContentHtml2(post.descriptionhtml2 || "");
             setTags(post.tags || []);
-            setFeaturedImage(`${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` || null);
-            setGalleryImages(post.gallery_images ? post.gallery_images.map((img: string) => `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`) : []);
+            setFeaturedImage(
+              post.featured_image?.startsWith("http")
+                ? post.featured_image
+                : `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` ||
+                    null,
+            );
+            setGalleryImages(
+              post.gallery_images
+                ? post.gallery_images.map((img: string) =>
+                    img.startsWith("http")
+                      ? img
+                      : `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`,
+                  )
+                : [],
+            );
             setStatus(post.status || "Publikováno");
             setCategory(post.category || "Education");
             setDate(
@@ -209,16 +223,16 @@ export default function BlogDetailsPage() {
   return (
     <div className="space-y-8 mx-auto pb-10">
       {/* Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-10 bg-gray-50/95 backdrop-blur py-4 border-b border-gray-200/50 -mx-6 px-6 sm:mx-0 sm:px-0 sm:bg-transparent sm:border-none sm:py-0 sm:backdrop-blur-none sm:static">
+      <div className="flex justify-between gap-4 backdrop-blur py-2 border-b border-gray-200/50 -mx-6 px-6 sm:mx-0 sm:px-0 sm:bg-transparent sm:border-none sm:py-0 sm:backdrop-blur-none sm:static">
         <div className="flex items-center gap-4">
           <Link
             href="/blog"
-            className="p-2.5 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
+            className="md:p-2.5 p-2 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="md:w-5 md:h-5 w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
+            <h1 className="md:text-3xl text-xl font-bold text-gray-800 tracking-tight">
               {isNew ? "Vytvořit článek" : "Upravit článek"}
             </h1>
           </div>
@@ -380,7 +394,7 @@ export default function BlogDetailsPage() {
                   onClick={handleGalleryClick}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="border-2 border-dashed border-secondary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-brand-bg/50 transition-all group min-h-[200px]"
+                  className="border-2 border-dashed border-secondary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-brand-bg/50 transition-all group min-h-50"
                 >
                   <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
                     <UploadCloud className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
@@ -388,8 +402,8 @@ export default function BlogDetailsPage() {
                   <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
                     Klikněte pro nahrání nebo přetáhněte sem
                   </span>
-                  <span className="text-xs text-gray-400 mt-1">
-                    SVG, PNG, JPG nebo GIF (max. 5MB)
+                  <span className="text-xs text-gray-400 mt-1 uppercase">
+                    JPEG, JPG, PNG, WEBP, AVIF (max. 5MB)
                   </span>
                 </div>
               )}
@@ -487,6 +501,7 @@ export default function BlogDetailsPage() {
                   maxSizeInMB: 5,
                   allowedFormats: [
                     "image/jpeg",
+                    "image/jpg",
                     "image/png",
                     "image/webp",
                     "image/avif",

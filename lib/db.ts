@@ -1,22 +1,19 @@
 import sql from "mssql";
 
+const server = process.env.DB_SERVER || "DESKTOP-7TQD1BU\\SQLEXPRESS";
+const sanitizedServer = server.replace(/^tcp:/, "").split(",")[0];
+
 const sqlConfig: sql.config = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  server: process.env.DB_SERVER || "DESKTOP-7TQD1BU\\SQLEXPRESS",
-  // pool: {
-  //   max: 10,
-  //   min: 0,
-  //   idleTimeoutMillis: 30000,
-  // },
+  server: sanitizedServer,
   options: {
-    encrypt: false,
+    encrypt: sanitizedServer.includes("database.windows.net"),
     trustServerCertificate: true,
   },
 };
 
-// Singleton connection pool
 let pool: sql.ConnectionPool | null = null;
 
 export const getPool = async () => {

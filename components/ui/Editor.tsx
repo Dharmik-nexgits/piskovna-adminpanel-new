@@ -48,7 +48,6 @@ const EditorComponent = ({
         "brush",
         "eraser",
         "|",
-        "heading",
         "font-size",
         "|",
         "bold",

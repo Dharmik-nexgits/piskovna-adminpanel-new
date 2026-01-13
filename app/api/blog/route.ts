@@ -1,19 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
-import { slugify } from "@/lib/utils";
-import fs from "fs";
-import path from "path";
-import { headers } from "next/headers";
+import { saveImageToBlob, slugify } from "@/lib/utils";
 
 async function ensureTableExists() {
   const pool = await getPool();
-  // Check if table exists
   const tableCheck = await pool
     .request()
     .query("SELECT * FROM sysobjects WHERE name='piskovnablog' AND xtype='U'");
 
   if (tableCheck.recordset.length === 0) {
-    // Create table (Keep existing schema creation)
     const createTableQuery = `
       CREATE TABLE piskovnablog (
         id INT IDENTITY(1,1) PRIMARY KEY,
@@ -39,20 +35,19 @@ async function ensureTableExists() {
     `;
     await pool.request().query(createTableQuery);
   } else {
-    // Add view_id column if missing
     try {
       await pool
         .request()
         .query("ALTER TABLE piskovnablog ADD view_id NVARCHAR(50)");
     } catch (e) {
-      /* ignore */
+      console.log("view_id column already exists");
     }
     try {
       await pool
         .request()
         .query("ALTER TABLE piskovnablog ADD author NVARCHAR(255)");
     } catch (e) {
-      /* ignore if exists */
+      console.log("author column already exists");
     }
 
     try {
@@ -60,73 +55,8 @@ async function ensureTableExists() {
         .request()
         .query("ALTER TABLE piskovnablog ADD aos_duration NVARCHAR(50)");
     } catch (e) {
-      /* ignore if exists */
+      console.log("aos_duration column already exists");
     }
-  }
-}
-
-export const dynamic = "force-dynamic";
-
-async function saveImage(
-  base64Data: string | null,
-  folder: string,
-  viewId: string,
-): Promise<string | null> {
-  if (!base64Data || !base64Data.startsWith("data:image")) {
-    if (typeof base64Data === "string") {
-      let cleanUrl = base64Data;
-      try {
-        if (cleanUrl.startsWith("http")) {
-          cleanUrl = new URL(cleanUrl).pathname;
-        }
-        if (cleanUrl.startsWith("/api/")) {
-          cleanUrl = cleanUrl.substring(5);
-        }
-        if (cleanUrl.startsWith("/")) {
-          cleanUrl = cleanUrl.substring(1);
-        }
-        return cleanUrl;
-      } catch (e) {
-        return base64Data;
-      }
-    }
-    return base64Data; // Return as is if url or null
-  }
-
-  try {
-    console.log(
-      `[saveImage] Processing base64 image for folder: ${folder}, viewId: ${viewId}`,
-    );
-    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) return null;
-
-    const type = matches[1];
-    const buffer = Buffer.from(matches[2], "base64");
-    const extension = type.split("/")[1];
-    const filename = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(7)}.${extension}`;
-
-    // Define upload directories
-    // User requested: "uploads ma main image folder" and "upload folder ma photogallry folder"
-    // AND "not in public". So we use root/uploads.
-    const uploadDir = path.join(process.cwd(), "uploads", folder, viewId);
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
-
-    // Return relative path for DB storage
-    const publicUrl = `uploads/${folder}/${viewId}/${filename}`;
-    console.log(`[saveImage] Saved file to: ${filePath}`);
-    console.log(`[saveImage] Returning URL: ${publicUrl}`);
-    return publicUrl;
-  } catch (error) {
-    console.error("[saveImage] Error saving image:", error);
-    return null;
   }
 }
 
@@ -213,16 +143,15 @@ export async function POST(request: Request) {
       Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
     // Process Images
-    const savedFeaturedImage = await saveImage(
+    const savedFeaturedImage = await saveImageToBlob(
       featured_image,
-      "mainimage",
-      viewId,
+      `mainimage/${viewId}`,
     );
 
     const savedGalleryImages = [];
     if (gallery_images && Array.isArray(gallery_images)) {
       for (const img of gallery_images) {
-        const saved = await saveImage(img, "photogallery", viewId);
+        const saved = await saveImageToBlob(img, `photogallery/${viewId}`);
         if (saved) savedGalleryImages.push(saved);
       }
     }

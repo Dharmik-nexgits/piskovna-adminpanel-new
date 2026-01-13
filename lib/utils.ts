@@ -1,3 +1,4 @@
+import { BlobServiceClient } from "@azure/storage-blob";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -201,6 +202,51 @@ export const slugify = (str: string) => {
     .replace(/[^a-z0-9 -]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+};
+
+export const saveImageToBlob = async (
+  base64Data: string | null,
+  folder: string = "uploads",
+): Promise<string | null> => {
+  if (!base64Data) return null;
+
+  if (!base64Data.startsWith("data:image")) {
+    return base64Data;
+  }
+
+  try {
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return null;
+
+    const blobServiceClient = BlobServiceClient.fromConnectionString(
+      process.env.AZURE_STORAGE_CONNECTION_STRING!,
+    );
+
+    const type = matches[1];
+    const buffer = Buffer.from(matches[2], "base64");
+    const extension = type.split("/")[1];
+    const filename = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}.${extension}`;
+
+    const blobName = folder ? `${folder}/${filename}` : filename;
+
+    const containerClient = blobServiceClient.getContainerClient(
+      process.env.AZURE_STORAGE_CONTAINER_NAME!
+    );
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+    await blockBlobClient.uploadData(buffer, {
+      blobHTTPHeaders: {
+        blobContentType: type,
+      },
+    });
+
+    return blockBlobClient.url;
+  } catch (error) {
+    console.error("Error uploading to blob:", error);
+    return null;
+  }
 };
 
 export default {

@@ -1,5 +1,6 @@
+/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
-import { Image as ImageIcon, X, UploadCloud } from "lucide-react";
+import { Image as UploadCloud } from "lucide-react";
 import { cn, validateImage, ImageValidationRules } from "@/lib/utils";
 
 export interface ImageUploaderProps {
@@ -100,7 +101,7 @@ export function ImageUploader({
           onClick={() => fileInputRef.current?.click()}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          className="border-2 border-dashed border-secondary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-brand-bg/50 transition-all group min-h-[200px]"
+          className="border-2 border-dashed border-secondary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-brand-bg/50 transition-all group min-h-50"
         >
           <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
             <UploadCloud className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
@@ -108,8 +109,11 @@ export function ImageUploader({
           <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
             Klikněte pro nahrání nebo přetáhněte sem
           </span>
-          <span className="text-xs text-gray-400 mt-1">
-            SVG, PNG, JPG nebo GIF (max. 5MB)
+          <span className="text-xs text-gray-400 mt-1 uppercase">
+            {validationRules?.allowedFormats
+              ?.map((f) => f.split("/")[1])
+              .join(", ")}{" "}
+            (max. {validationRules?.maxSizeInMB}MB)
           </span>
         </div>
       )}

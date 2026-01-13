@@ -28,9 +28,14 @@ export default function DashboardHeader({
     if (userData) {
       try {
         const parsed = JSON.parse(userData);
-        setUserEmail(parsed.username || "Uživatel");
+        // Prevent synchronous state update warning
+        setTimeout(() => {
+          setUserEmail(parsed.username || "Uživatel");
+        }, 0);
       } catch (e) {
-        setUserEmail("Uživatel");
+        setTimeout(() => {
+          setUserEmail("Uživatel");
+        }, 0);
       }
     }
   }, []);
@@ -56,7 +61,6 @@ export default function DashboardHeader({
   const title = getPageTitle(pathname);
 
   const getBreadcrumbs = (path: string) => {
-    // Simple logic for now, can be expanded
     const items = [];
     if (path === constants.route.blog) {
       items.push({ label: "Blog" });
@@ -82,7 +86,7 @@ export default function DashboardHeader({
               setCollapsed(!collapsed);
             }
           }}
-          className="p-2 rounded-md text-gray-500 hover:bg-brand-bg hover:text-primary transition-colors focus:outline-none"
+          className="p-2 rounded-md text-gray-500 hover:bg-brand-bg cursor-pointer hover:text-primary transition-colors focus:outline-none"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -99,7 +103,7 @@ export default function DashboardHeader({
       <div className="flex items-center space-x-4">
         {/* User Profile */}
         <div
-          className="relative py-4" /* Added padding for better hover target area */
+          className="relative py-4"
           onMouseEnter={() => setIsDropdownOpen(true)}
           onMouseLeave={() => setIsDropdownOpen(false)}
         >
@@ -116,7 +120,7 @@ export default function DashboardHeader({
           {/* Dropdown Menu */}
           <div
             className={cn(
-              "absolute lg:left-10 right-0 top-14 w-48 pt-2 transition-all duration-200 z-50",
+              "absolute lg:left-10 right-0 top-14 w-48 pt-2 transition-all duration-200 z-50 cursor-pointer",
               isDropdownOpen
                 ? "opacity-100 visible translate-y-0"
                 : "opacity-0 invisible -translate-y-2",

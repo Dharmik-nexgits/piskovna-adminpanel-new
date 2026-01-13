@@ -145,16 +145,22 @@ export default function BlogPreviewPage() {
               <img
                 data-aos="fade-up"
                 src={
-                  `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` ||
-                  "/images/blogdetail_img.jpg"
+                  `${
+                    post.featured_image?.startsWith("http")
+                      ? post.featured_image
+                      : `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}`
+                  }` || "/images/blogdetail_img.jpg"
                 }
                 alt={post.title}
                 className="relative w-6/12 h-auto rounded-sm"
                 onClick={() =>
                   setOpenImageModal({
                     url:
-                      `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}` ||
-                      "/images/blogdetail_img.jpg",
+                      `${
+                        post.featured_image?.startsWith("http")
+                          ? post.featured_image
+                          : `${process.env.NEXT_PUBLIC_BASE_URL}/${post.featured_image}`
+                      }` || "/images/blogdetail_img.jpg",
                     index: 0,
                     open: true,
                   })
@@ -220,11 +226,21 @@ export default function BlogPreviewPage() {
                       className="bg-[#D6D1C4] w-full h-full relative group cursor-pointer overflow-hidden"
                     >
                       <img
-                        src={`${process.env.NEXT_PUBLIC_BASE_URL}/${img}`}
+                        src={`${
+                          img?.startsWith("http")
+                            ? img
+                            : `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`
+                        }`}
                         alt={`Gallery ${i}`}
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         onClick={() =>
-                          setOpenImageModal({ url: `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`, index: i, open: true })
+                          setOpenImageModal({
+                            url: img.startsWith("http")
+                              ? img
+                              : `${process.env.NEXT_PUBLIC_BASE_URL}/${img}`,
+                            index: i,
+                            open: true,
+                          })
                         }
                       />
                     </div>
