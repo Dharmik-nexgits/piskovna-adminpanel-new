@@ -232,7 +232,7 @@ export const saveImageToBlob = async (
     const blobName = folder ? `${folder}/${filename}` : filename;
 
     const containerClient = blobServiceClient.getContainerClient(
-      process.env.AZURE_STORAGE_CONTAINER_NAME!
+      process.env.AZURE_STORAGE_CONTAINER_NAME!,
     );
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
@@ -249,6 +249,62 @@ export const saveImageToBlob = async (
   }
 };
 
+export const translateToCzech = (error: string): string => {
+  const lowerError = String(error).toLowerCase();
+
+  if (
+    lowerError.includes("blog with this title") ||
+    lowerError.includes("slug url already exists")
+  ) {
+    return "Článek s tímto názvem nebo URL adresou již existuje.";
+  }
+
+  if (lowerError.includes("featured image is too large")) {
+    return "Hlavní obrázek je příliš velký. Maximální velikost je 5MB.";
+  }
+  if (
+    lowerError.includes("gallery image") &&
+    lowerError.includes("too large")
+  ) {
+    return "Jeden nebo více obrázků v galerii je příliš velkých. Maximální velikost je 5MB.";
+  }
+
+  if (lowerError.includes("error creating blog")) {
+    return "Nepodařilo se vytvořit článek. Zkuste to prosím znovu.";
+  }
+  if (lowerError.includes("error updating blog")) {
+    return "Nepodařilo se aktualizovat článek. Zkuste to prosím znovu.";
+  }
+  if (lowerError.includes("error deleting blog")) {
+    return "Nepodařilo se smazat článek. Zkuste to prosím znovu.";
+  }
+  if (lowerError.includes("blog not found")) {
+    return "Článek nebyl nalezen.";
+  }
+
+  if (lowerError.includes("error fetching blog")) {
+    return "Nepodařilo se načíst článek. Zkuste to prosím znovu.";
+  }
+  if (
+    lowerError.includes("failed to fetch") ||
+    lowerError.includes("network error") ||
+    lowerError.includes("connectionerror") ||
+    lowerError.includes("econnreset") ||
+    lowerError.includes("failed to connect")
+  ) {
+    return "Chyba připojení k databázi nebo k síti. Zkontrolujte prosím své internetové připojení a nastavení firewallu (Azure SQL Firewall).";
+  }
+
+  if (
+    lowerError.includes("internal server error") ||
+    lowerError.includes("status 500")
+  ) {
+    return "Došlo k chybě serveru. Zkuste to prosím později.";
+  }
+
+  return error || "Došlo k neznámé chybě.";
+};
+
 export default {
   cn,
   isObject,
@@ -259,4 +315,5 @@ export default {
   encodeBase64,
   decodeBase64,
   validateImage,
+  translateToCzech,
 };

@@ -154,7 +154,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       };
 
       if (!url) {
-        showErrorToast("API request error: Missing URL");
+        const translatedMsg = Utils.translateToCzech(
+          "API request error: Missing URL",
+        );
+        showErrorToast(await translatedMsg);
         return null;
       }
 
@@ -190,7 +193,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (response?.data?.errorResponse?.message) {
           const msg = response.data.errorResponse.message;
-          showErrorToast(`API response error: ${msg}`);
+          const translatedMsg = Utils.translateToCzech(msg);
+          showErrorToast(translatedMsg);
           onError(response.data.errorResponse);
           return null;
         }
@@ -211,10 +215,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         if (status === 413) {
-          showErrorToast("Request Entity Too Large");
+          showErrorToast(
+            "Požadavek je příliš velký (Request Entity Too Large).",
+          );
         } else if (error) {
           const message = Utils.catchErrorResponse(e);
-          showErrorToast(message);
+          const translatedMsg = Utils.translateToCzech(message);
+          showErrorToast(translatedMsg);
         }
 
         onError(error);

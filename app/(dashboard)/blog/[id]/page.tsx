@@ -30,7 +30,7 @@ const Editor = dynamic(() => import("@/components/ui/Editor"), {
 import { useAppContext } from "@/contexts/AppContext";
 import { useRouter } from "next/navigation";
 import constants from "@/lib/constants";
-import { validateImage } from "@/lib/utils";
+import { translateToCzech, validateImage } from "@/lib/utils";
 import { message } from "antd";
 
 export default function BlogDetailsPage() {
@@ -39,25 +39,22 @@ export default function BlogDetailsPage() {
   const params = useParams();
   const isNew = params.id === "new";
 
-  // Form State
   const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState(""); // Add slug state
-  const [description, setDescription] = useState(""); // Maps to 'description'
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
   const [metaTitle, setMetaTitle] = useState("");
   const [metaKeywords, setMetaKeywords] = useState("");
   const [contentHtml1, setContentHtml1] = useState("");
   const [contentHtml2, setContentHtml2] = useState("");
-
   const [tags, setTags] = useState<string[]>([]);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   const [status, setStatus] = useState("Publikováno");
   const [category, setCategory] = useState("Education");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default today
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [showNewsletter, setShowNewsletter] = useState(true);
   const [aosDuration, setAosDuration] = useState("");
-
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -137,17 +134,36 @@ export default function BlogDetailsPage() {
           url: constants.apis.blog,
           method: "POST",
           data: payload,
+          onSuccess: () => {
+            message.success("Článek byl úspěšně vytvořen.");
+          },
+          onError: (error) => {
+            const translatedError = translateToCzech(
+              String((error as any)?.response?.data?.message),
+            );
+            message.error(translatedError);
+          },
         });
       } else {
         await apiRequest({
           url: `${constants.apis.blog}/${params.id}`,
           method: "PUT",
           data: payload,
+          onSuccess: () => {
+            message.success("Článek byl úspěšně aktualizován.");
+          },
+          onError: (error) => {
+            const translatedError = translateToCzech(
+              String((error as any)?.response?.data?.message),
+            );
+            message.error(translatedError);
+          },
         });
       }
       router.push("/blog");
     } catch (error) {
-      console.error("Failed to save blog:", error);
+      const translatedError = translateToCzech(String(error));
+      message.error(translatedError);
     }
   };
 

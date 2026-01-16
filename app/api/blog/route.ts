@@ -138,9 +138,47 @@ export async function POST(request: Request) {
       finalSlug = `post-${Date.now()}`;
     }
 
-    // Generate View ID
     const viewId =
       Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+    const MAX_IMAGE_SIZE_MB = 5;
+    const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
+    const getImageSizeInBytes = (base64String: string) => {
+      const base64Data = base64String.split(",")[1] || base64String;
+      return Buffer.byteLength(base64Data, "base64");
+    };
+
+    if (featured_image) {
+      const size = getImageSizeInBytes(featured_image);
+      if (size > MAX_IMAGE_SIZE_BYTES) {
+        return NextResponse.json(
+          {
+            message: `Featured image is too large. Max size is ${MAX_IMAGE_SIZE_MB}MB.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (gallery_images && Array.isArray(gallery_images)) {
+      for (let i = 0; i < gallery_images.length; i++) {
+        const img = gallery_images[i];
+        if (img) {
+          const size = getImageSizeInBytes(img);
+          if (size > MAX_IMAGE_SIZE_BYTES) {
+            return NextResponse.json(
+              {
+                message: `Gallery image ${
+                  i + 1
+                } is too large. Max size is ${MAX_IMAGE_SIZE_MB}MB.`,
+              },
+              { status: 400 },
+            );
+          }
+        }
+      }
+    }
 
     // Process Images
     const savedFeaturedImage = await saveImageToBlob(
@@ -217,7 +255,17 @@ export async function POST(request: Request) {
       message: "Blog created successfully",
       id: result.recordset[0].id,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error.number === 2627 ||
+      (error.message &&
+        error.message.includes("Violation of UNIQUE KEY constraint"))
+    ) {
+      return NextResponse.json(
+        { message: "A blog with this title or slug url already exists." },
+        { status: 400 },
+      );
+    }
     console.error("Error creating blog:", error);
     return NextResponse.json(
       { message: "Error creating blog", error: String(error) },
