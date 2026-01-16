@@ -38,7 +38,6 @@ export default function BlogDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const isNew = params.id === "new";
-
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
@@ -49,7 +48,6 @@ export default function BlogDetailsPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
-
   const [status, setStatus] = useState("Publikováno");
   const [category, setCategory] = useState("Education");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -456,9 +454,15 @@ export default function BlogDetailsPage() {
               <DatePicker
                 label="Datum publikování"
                 value={date}
-                onChange={(e: {
-                  target: { value: React.SetStateAction<string> };
-                }) => setDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setDate(newDate);
+                  const today = new Date().toISOString().split("T")[0];
+                  if (newDate > today) {
+                    setStatus("Návrh");
+                  }
+                }}
               />
             </div>
             <Checkbox
